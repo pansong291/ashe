@@ -1,0 +1,97 @@
+@charset "utf-8";
+body {
+    font: 100% Verdana, Arial, Helvetica, sans-serif;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    color: #000
+}
+
+.VisualizationMainPage #mainContent {
+    background: #fff
+}
+
+.VisualizationMainPage #container {
+    background: #fff;
+    text-align: left
+}
+
+.VisualizationMainPage #algoControlSection {
+    background: #ded;
+    color: #000
+}
+
+.VisualizationMainPage #generalAnimationControlSection {
+    background: #ded;
+    color: #060
+}
+
+.VisualizationMainPage #header {
+    background: #063;
+    color: #fc3;
+    padding: 0 10px 0 20px
+}
+
+.VisualizationMainPage #header A:visited {
+    text-decoration: none;
+    color: #fc3
+}
+
+.VisualizationMainPage #header h1 {
+    margin: 0;
+    padding: 10px 0
+}
+
+.VisualizationMainPage #header A:link {
+    text-decoration: none;
+    color: #fc3
+}
+
+.VisualizationMainPage #container {
+    background: #fff;
+    margin: 0 auto;
+    text-align: left
+}
+
+.VisualizationMainPage #footer A:visited {
+    text-decoration: none;
+    color: #ffcc33
+}
+
+.VisualizationMainPage #footer A:link {
+    text-decoration: none;
+    color: #fc3
+}
+
+.VisualizationMainPage #mainContent h1 {
+    padding: 0 20px;
+    background: #fff;
+    color: #063
+}
+
+.VisualizationMainPage #mainContent h2 {
+    padding: 0 20px;
+    background: #fff;
+    color: #063
+}
+
+.VisualizationMainPage #mainContent h3 {
+    padding: 0 20px;
+    background: #fff;
+    color: #063
+}
+
+.VisualizationMainPage #footer {
+    padding: 0 10px;
+    background: #063;
+    color: #fc3
+}
+
+.VisualizationMainPage #footer p {
+    margin: 0;
+    padding: 10px 0
+}
+
+EM {
+    text-decoration: bold
+}

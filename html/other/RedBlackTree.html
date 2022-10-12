@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>红黑树动画在线演示</title>
+    <meta name="keywords" content="红黑树,RedBlack-Tree,红黑树在线,红黑树动画,红黑树动画在线演示"/>
+    <meta name="description" content="红黑树动画在线增删改查自平衡动画演示"/>
+    <script>
+        var _hmt = _hmt || [];
+    </script>
+    <link rel="stylesheet" href="../../css/other/RedBlackTree/visualizationPageStyle.css">
+    <link rel="stylesheet" href="../../css/other/RedBlackTree/jquery-ui-1.8.11.custom.css">
+    <!--<script src="../../js/other/RedBlackTree/jquery-1.5.2.min.js"></script>-->
+    <script type="text/javascript" src="https://cdn.staticfile.org/jquery/1.5.1/jquery.min.js"></script>
+    <script src="../../js/other/RedBlackTree/jquery-ui-1.8.11.custom.min.js"></script>
+    <script type="text/javascript" src="../../js/other/RedBlackTree/CustomEvents.js"></script>
+    <script type="text/javascript" src="../../js/other/RedBlackTree/UndoFunctions.js"></script>
+    <script type="text/javascript" src="../../js/other/RedBlackTree/AnimatedObject.js"></script>
+    <script type="text/javascript" src="../../js/other/RedBlackTree/AnimatedLabel.js"></script>
+    <script type="text/javascript" src="../../js/other/RedBlackTree/AnimatedCircle.js"></script>
+    <script type="text/javascript" src="../../js/other/RedBlackTree/AnimatedRectangle.js"></script>
+    <script type="text/javascript" src="../../js/other/RedBlackTree/AnimatedLinkedList.js"></script>
+    <script type="text/javascript" src="../../js/other/RedBlackTree/HighlightCircle.js"></script>
+    <script type="text/javascript" src="../../js/other/RedBlackTree/Line.js"></script>
+    <script type="text/javascript" src="../../js/other/RedBlackTree/ObjectManager.js"></script>
+    <script type="text/javascript" src="../../js/other/RedBlackTree/AnimationMain.js"></script>
+    <script type="text/javascript" src="../../js/other/RedBlackTree/Algorithm.js"></script>
+    <script type="text/javascript" src="../../js/other/RedBlackTree/RedBlack.js"></script>
+</head>
+<body onload="init();" class="VisualizationMainPage" style="">
+<div id="container">
+    <div id="header"><h1>红黑树动画在线演示</h1></div>
+    <div><a target="_blank" href="https://www.phpisfuture.com">FutureBlog博客</a>
+        <a target="_blank" href="https://www.phpisfuture.com/article/1">红黑树笔记</a>
+        <a target="_blank" href="https://www.phpisfuture.com/article/2">平衡二叉树笔记</a>
+        <a href="mailto:352342845@qq.com">邮件:352342845@qq.com</a>
+    </div>
+    <div id="mainContent">
+        <div id="algoControlSection">
+            <table id="AlgorithmSpecificControls"></table>
+        </div>
+        <canvas id="canvas" width="1000" height="500"></canvas>
+        <div id="generalAnimationControlSection">
+            <table id="GeneralAnimationControls"></table>
+        </div>
+    </div>
+</div>
+</body>
+</html>
