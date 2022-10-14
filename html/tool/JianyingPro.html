@@ -5,9 +5,86 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <title>剪映 - 字幕导出工具</title>
     <style type="text/css" rel="stylesheet">
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        background: #f0f2f5;
+      }
+
       label {
         user-select: none;
         font-weight: bold;
+      }
+
+      input,
+      select,
+      textarea,
+      button {
+        padding: 4px 8px;
+        transition: all 0.3s, height 0s, width 0s;
+      }
+
+      input,
+      select,
+      textarea {
+        background: white;
+        border: 1px solid #d9d9d9;
+        border-radius: 2px;
+        outline: none;
+      }
+
+      button {
+        color: #fff;
+        background: var(--paso-primary-color);
+        border: 1px solid var(--paso-primary-color);
+        border-radius: 2px;
+        text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.12);
+        box-shadow: 0 2px 0 rgba(0, 0, 0, 0.05);
+        outline: none;
+      }
+
+      button:hover,
+      button:focus {
+        border-color: var(--paso-primary-color-hover);
+        background: var(--paso-primary-color-hover);
+      }
+
+      button:active {
+        border-color: var(--paso-primary-color-active);
+        background: var(--paso-primary-color-active);
+      }
+
+      input,
+      select,
+      button {
+        height: 32px;
+        cursor: pointer;
+      }
+
+      input:hover,
+      select:hover,
+      textarea:hover {
+        border-color: var(--paso-primary-color-hover);
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: var(--paso-primary-color-hover);
+        box-shadow: 0 0 0 2px var(--paso-primary-color-outline);
+      }
+
+      a {
+        transition: all 0.3s;
+        color: var(--paso-primary-7);
+        text-decoration: none;
+      }
+
+      a:hover,
+      a:focus {
+        color: var(--paso-primary-5);
       }
 
       div {
@@ -83,7 +160,25 @@
         <div><label>输出 SRT</label></div>
       </div>
     </div>
+    <script src="https://bgrins.github.io/TinyColor/dist/tinycolor-min.js "></script>
+    <script src="../../js/color/color-palette.js"></script>
+    <script src="../../js/color/values.js"></script>
+    <script src="../../js/theme/theme-color-generator.js"></script>
     <script>
+      let themeColors = [
+        '#FF4D4F',
+        '#FAAD14',
+        '#52C41A',
+        '#1eb980',
+        '#448277',
+        '#05BDC9',
+        '#3d7fff',
+        '#b15dff',
+        '#F55CB4',
+        '#ff6859',
+        '#3F3F3F'
+      ]
+      window.__paso.generateThemeColors(themeColors[Math.floor(Math.random() * themeColors.length)])
       let mainContainer = document.getElementById('main-container')
       // 文件选择
       let inputFile = document.getElementById('input-file')
