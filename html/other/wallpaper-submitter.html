@@ -336,7 +336,7 @@ https://www.52pojie.cn/thread-1702422-1-1.html
               view: 10,
               status: 0,
               user_id: '61c1f22481337a0001e935f5',
-              time: 1666231160000
+              time: 0
             }
           }
         },
@@ -398,6 +398,9 @@ https://www.52pojie.cn/thread-1702422-1-1.html
           output() {
             return JSON.stringify(this.result, void 0, 2)
           }
+        },
+        mounted() {
+          this.result.time = moment().valueOf()
         }
       }
       createApp(configure).mount('#app')
