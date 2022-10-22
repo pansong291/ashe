@@ -1,0 +1,383 @@
+<!--
+帮别人写的小工具
+https://www.52pojie.cn/thread-1702422-1-1.html
+-->
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+  <head>
+    <meta charset="UTF-8" />
+    <title>壁纸提交</title>
+    <script
+      src="https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/vue/3.2.31/vue.global.min.js"
+      type="application/javascript"></script>
+    <script
+      src="https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/moment.js/2.29.1/moment.min.js"
+      type="application/javascript"></script>
+    <style>
+      :root {
+        --ws-primary-color: #3d7fff;
+        --ws-primary-color-disabled: #e0efff;
+        --ws-primary-color-hover: #669eff;
+        --ws-primary-color-active: #295ed9;
+        --ws-primary-color-outline: rgba(61, 127, 255, 0.2);
+        --ws-primary-color-deprecated-bg: #f0f7ff;
+        --ws-primary-color-deprecated-border: #b8d7ff;
+        --ws-primary-color-error: #ff7875;
+        --ws-primary-color-error-outline: rgba(255, 77, 79, 0.2);
+        --ws-primary-1: #f0f7ff;
+        --ws-primary-2: #e0efff;
+        --ws-primary-3: #b8d7ff;
+        --ws-primary-4: #8fbcff;
+        --ws-primary-5: #669eff;
+        --ws-primary-6: #3d7fff;
+        --ws-primary-7: #295ed9;
+        --ws-primary-8: #1942b3;
+        --ws-primary-9: #0d2a8c;
+        --ws-primary-10: #081b66;
+        --ws-primary-color-deprecated-l-35: #eff5ff;
+        --ws-primary-color-deprecated-l-20: #a3c2ff;
+        --ws-primary-color-deprecated-t-20: #6499ff;
+        --ws-primary-color-deprecated-t-50: #9ebfff;
+        --ws-primary-color-deprecated-f-12: rgba(61, 127, 255, 0.12);
+        --ws-primary-color-active-deprecated-f-30: rgba(240, 247, 255, 0.3);
+        --ws-primary-color-active-deprecated-d-02: #e6f2ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        background: #f0f2f5;
+      }
+
+      label {
+        user-select: none;
+      }
+
+      label.table-cell {
+        text-align: end;
+      }
+
+      input,
+      select,
+      textarea,
+      button {
+        padding: 4px 8px;
+        transition: all 0.3s, height 0s, width 0s;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 600px;
+        background: white;
+        border: 1px solid #d9d9d9;
+        border-radius: 2px;
+        outline: none;
+      }
+
+      input[type='radio'],
+      input[type='checkbox'] {
+        width: auto;
+        height: auto;
+        cursor: pointer;
+      }
+
+      button {
+        padding: 0 16px;
+        color: #fff;
+        background: var(--ws-primary-color);
+        border: 1px solid var(--ws-primary-color);
+        border-radius: 2px;
+        text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.12);
+        box-shadow: 0 2px 0 rgba(0, 0, 0, 0.05);
+        outline: none;
+      }
+
+      button:hover,
+      button:focus {
+        border-color: var(--ws-primary-color-hover);
+        background: var(--ws-primary-color-hover);
+      }
+
+      button:active {
+        border-color: var(--ws-primary-color-active);
+        background: var(--ws-primary-color-active);
+      }
+
+      input {
+        height: 32px;
+      }
+
+      select,
+      button {
+        height: 32px;
+        cursor: pointer;
+      }
+
+      input:hover,
+      select:hover,
+      textarea:hover {
+        border-color: var(--ws-primary-color-hover);
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: var(--ws-primary-color-hover);
+        box-shadow: 0 0 0 2px var(--ws-primary-color-outline);
+      }
+
+      input.error {
+        border-color: var(--ws-primary-color-error);
+      }
+
+      input.error:focus {
+        border-color: var(--ws-primary-color-error);
+        box-shadow: 0 0 0 2px var(--ws-primary-color-error-outline);
+      }
+
+      a {
+        transition: all 0.3s;
+        color: var(--ws-primary-7);
+        text-decoration: none;
+      }
+
+      a:hover,
+      a:focus {
+        color: var(--ws-primary-5);
+      }
+
+      div {
+        margin: 4px 0;
+      }
+
+      .gap-8 {
+        gap: 8px;
+      }
+
+      .mr-8 {
+        margin-right: 8px;
+      }
+
+      .flex {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .flex.row {
+        flex-direction: row;
+      }
+
+      .table {
+        display: table;
+        border-spacing: 8px 2px;
+      }
+
+      .table-row {
+        display: table-row;
+      }
+
+      .table-cell {
+        display: table-cell;
+        vertical-align: middle;
+      }
+
+      .cursor-pointer {
+        cursor: pointer;
+      }
+
+      .monospace {
+        font-family: Consolas, 'Liberation Mono', Menlo, Courier, monospace, system-ui;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div class="flex">
+        <div class="table">
+          <div class="table-row">
+            <label class="table-cell" for="r-mode">mode:</label>
+            <div class="table-cell"><input id="r-mode" type="text" v-model="result.mode" /></div>
+          </div>
+          <div class="table-row">
+            <label class="table-cell" for="r-category">分类:</label>
+            <div class="table-cell">
+              <select id="r-category" :value="result.category_id" @change="setCategory($event.target.value)">
+                <option v-for="category in form.categories" :key="category.id" :value="category.id">
+                  {{category.name}}
+                </option>
+              </select>
+            </div>
+          </div>
+          <div class="table-row">
+            <label class="table-cell" for="r-tags">标签:</label>
+            <div class="table-cell"><input id="r-tags" type="text" v-model="result.tags" /></div>
+          </div>
+          <div class="table-row">
+            <label class="table-cell" for="r-name">标题:</label>
+            <div class="table-cell"><input id="r-name" type="text" v-model="result.name" /></div>
+          </div>
+          <div class="table-row">
+            <label class="table-cell" for="r-images">图片地址:</label>
+            <div class="table-cell">
+              <input
+                id="r-images"
+                type="text"
+                :class="`monospace ${form.images.error && 'error'}`"
+                v-model="imagesAddress" />
+            </div>
+          </div>
+          <div class="table-row">
+            <label class="table-cell" for="r-image">主图:</label>
+            <div class="table-cell"><input id="r-image" type="text" class="monospace" v-model="result.image" /></div>
+          </div>
+          <div class="table-row">
+            <label class="table-cell" for="r-coll">coll:</label>
+            <div class="table-cell"><input id="r-coll" type="text" class="monospace" v-model="result.coll" /></div>
+          </div>
+          <div class="table-row">
+            <label class="table-cell" for="r-zan">00赞:</label>
+            <div class="table-cell"><input id="r-zan" type="text" class="monospace" v-model="result.zan" /></div>
+          </div>
+          <div class="table-row">
+            <label class="table-cell" for="r-vie">阅读量:</label>
+            <div class="table-cell"><input id="r-vie" type="text" class="monospace" v-model="result.vie" /></div>
+          </div>
+          <div class="table-row">
+            <label class="table-cell">状态:</label>
+            <div class="table-cell">
+              <label v-for="stat in form.status" :key="stat.id" class="cursor-pointer mr-8">
+                <input type="radio" v-model="result.statu" :value="stat.id" />{{stat.name}}
+              </label>
+            </div>
+          </div>
+          <div class="table-row">
+            <label class="table-cell" for="r-user">用户:</label>
+            <div class="table-cell"><input id="r-user" type="text" class="monospace" v-model="result.user_id" /></div>
+          </div>
+          <div class="table-row">
+            <label class="table-cell" for="r-time">时间:</label>
+            <div class="table-cell">
+              <input id="r-time" type="datetime-local" step=".1" class="monospace" v-model="timestamp" />
+            </div>
+          </div>
+          <div class="table-row">
+            <label class="table-cell" for="r-output">JSON:</label>
+            <div class="table-cell">
+              <textarea id="r-output" rows="15" readonly ref="output" v-model="output"></textarea>
+            </div>
+          </div>
+          <div class="table-row">
+            <div class="table-cell"></div>
+            <div class="table-cell" style="text-align: center">
+              <button type="button" style="width: 160px" @click="copyOutput">复制</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const dateTimeFormat = 'YYYY-MM-DD[T]HH:mm:ss.SSS'
+      const { createApp } = Vue
+      const configure = {
+        data() {
+          return {
+            form: {
+              categories: [
+                { id: '6049dcca78b4c30001171660', name: '写真' },
+                { id: '1', name: '测试分类1' },
+                { id: '2', name: '测试分类2' }
+              ],
+              images: {
+                value: '',
+                error: false
+              },
+              status: [
+                { id: '1', name: '上线' },
+                { id: '0', name: '下线' }
+              ],
+              output: ''
+            },
+            result: {
+              mode: '0',
+              category_id: '6049dcca78b4c30001171660',
+              category_name: '写真',
+              tags: '',
+              name: '',
+              images: [
+                'https://lk.dhso.top/admin/fXoFj5sk.jpg',
+                'https://lk.dhso.top/admin/Vf7C8VTI.jpg',
+                'https://lk.dhso.top/admin/gJPDz0VJ.jpg',
+                'https://lk.dhso.top/admin/70W9Wr5Q.jpg',
+                'https://lk.dhso.top/admin/tnfwp3dz.jpg',
+                'https://lk.dhso.top/admin/mumJBcYG.jpg'
+              ],
+              image: '',
+              coll: '',
+              zan: '10',
+              vie: '10',
+              statu: '0',
+              user_id: '61c1f22481337a0001e935f5',
+              time: '1666231160000'
+            }
+          }
+        },
+        methods: {
+          setCategory(id) {
+            let category = this.form.categories.find((c) => c.id === id)
+            if (category && category.id) {
+              this.result.category_id = category.id
+              this.result.category_name = category.name
+            }
+          },
+          copyOutput() {
+            this.$refs.output.select()
+            document.execCommand('copy')
+          }
+        },
+        computed: {
+          imagesAddress: {
+            get() {
+              return this.form.images.value || (this.result.images || []).map((a) => `"${a}"`).join()
+            },
+            set(v) {
+              this.form.images.value = v
+              try {
+                let fn = new Function(`return [${v}]`)
+                let res = fn()
+                res.forEach((str) => {
+                  if (typeof str !== 'string' || Object.prototype.toString.call(str) !== '[object String]')
+                    throw 'the elements in images must be string'
+                })
+                this.result.images = res
+                this.form.images.error = false
+              } catch (e) {
+                console.warn(e)
+                this.form.images.error = true
+              }
+            }
+          },
+          timestamp: {
+            get() {
+              let t = this.result.time
+              if (!t) return ''
+              return moment(Number(t)).format(dateTimeFormat)
+            },
+            set(v) {
+              if (!v) this.result.time = ''
+              else this.result.time = String(moment(v, dateTimeFormat).valueOf())
+            }
+          },
+          output() {
+            return JSON.stringify(this.result)
+          }
+        }
+      }
+      createApp(configure).mount('#app')
+    </script>
+  </body>
+</html>
