@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Vue 状态同步测试</title>
+    <link href="../../css/common/index.css" rel="stylesheet" />
+    <style>
+      .red-box {
+        height: 32px;
+        padding: 4px 8px;
+        background: white;
+        border: 1px solid #ff7875;
+        border-radius: 2px;
+      }
+      .function-area {
+        position: relative;
+      }
+
+      .function-area:before {
+        content: 'function(input) {';
+        top: 0;
+        padding-top: 4px;
+      }
+
+      .function-area:after {
+        content: '}';
+        bottom: 0;
+        padding-bottom: 4px;
+      }
+
+      .function-area:before,
+      .function-area:after {
+        position: absolute;
+        padding-left: 8px;
+        margin: 1px;
+        pointer-events: none;
+        background: white;
+        display: block;
+        width: calc(100% - 2ch - 8px);
+        box-sizing: border-box;
+      }
+
+      .function-area > textarea {
+        padding: calc(8px + 1em) calc(8px + 2ch);
+      }
+    </style>
+    <script
+      src="https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/vue/3.2.31/vue.global.prod.min.js"
+      type="application/javascript"></script>
+  </head>
+  <body>
+    <div id="app" class="flex">
+      <div class="flex align-stretch gap-2" style="width: 600px">
+        <h1>Vue 状态同步测试</h1>
+        <p>1. 在下方输入任意内容，观察红框中的数据变化。</p>
+        <input type="text" class="input monospace fs-14" spellcheck="false" v-model="text" ref="textInput" />
+        <div class="red-box monospace fs-16">{{ text }}</div>
+        <p>2. 直接点击运行按钮，红框内容是否变化？解除代码中注释后再运行，红框内容又是否有变化？</p>
+        <div class="function-area monospace fs-14 flex align-stretch">
+          <textarea class="input monospace fs-14" style="height: 100px" spellcheck="false" v-model="code"></textarea>
+        </div>
+        <button type="button" class="button" @click="runCode">运行代码</button>
+      </div>
+      <a href="react-sync.html" style="margin-top: 100px">点此前往 React 状态同步测试</a>
+    </div>
+    <script>
+      const appConfig = {
+        data() {
+          return {
+            text: '',
+            code: "console.log('random', Math.random());\ninput.value = 'test';\n// input.dispatchEvent(new Event('input'));"
+          }
+        },
+        methods: {
+          runCode() {
+            const fn = new Function('input', this.code)
+            fn(this.$refs.textInput)
+          }
+        }
+      }
+      Vue.createApp(appConfig).mount('#app')
+    </script>
+  </body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+  <head>
+    <meta charset="UTF-8" />
+    <title>React 状态同步测试</title>
+    <link href="../../css/common/index.css" rel="stylesheet" />
+    <style>
+      .red-box {
+        height: 32px;
+        padding: 4px 8px;
+        background: white;
+        border: 1px solid #ff7875;
+        border-radius: 2px;
+      }
+
+      .function-area {
+        position: relative;
+      }
+
+      .function-area:before {
+        content: 'function(input) {';
+        top: 0;
+        padding-top: 4px;
+      }
+
+      .function-area:after {
+        content: '}';
+        bottom: 0;
+        padding-bottom: 4px;
+      }
+
+      .function-area:before,
+      .function-area:after {
+        position: absolute;
+        padding-left: 8px;
+        margin: 1px;
+        pointer-events: none;
+        background: white;
+        display: block;
+        width: calc(100% - 2ch - 8px);
+        box-sizing: border-box;
+      }
+
+      .function-area > textarea {
+        padding: calc(8px + 1em) calc(8px + 2ch);
+      }
+    </style>
+    <script
+      src="https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/react/18.2.0/umd/react.production.min.js"
+      type="application/javascript"></script>
+    <script
+      src="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/react-dom/18.2.0/umd/react-dom.production.min.js"
+      type="application/javascript"></script>
+    <script
+      src="https://lf9-cdn-tos.bytecdntp.com/cdn/expire-1-M/babel-standalone/7.0.0-alpha.20/babel.min.js"
+      type="application/javascript"></script>
+  </head>
+  <body>
+    <div id="app" class="flex"></div>
+    <script type="text/babel">
+      const { useState, useRef } = React
+
+      function App() {
+        const [text, setText] = useState('')
+        const [code, setCode] = useState(
+          "console.log('random', Math.random());\ninput.value = 'test';\n// input.dispatchEvent(new Event('input', {bubbles: true}));"
+        )
+        const inputRef = useRef(null)
+
+        function runCode() {
+          const fn = new Function('input', code)
+          fn(inputRef.current)
+        }
+
+        return (
+          <React.Fragment>
+            <div className="flex align-stretch gap-2" style={{ width: '600px' }}>
+              <h1>React 状态同步测试</h1>
+              <p>1. 在下方输入任意内容，观察红框中的数据变化。</p>
+              <input
+                type="text"
+                className="input monospace fs-14"
+                spellCheck="false"
+                onInput={(e) => setText(e.target.value)}
+                ref={inputRef}
+              />
+              <div className="red-box monospace fs-16">{text}</div>
+              <p>2. 直接点击运行按钮，红框内容是否变化？解除代码中注释后再运行，红框内容又是否有变化？</p>
+              <div className="function-area monospace fs-14 flex align-stretch">
+                <textarea
+                  className="input monospace fs-14"
+                  style={{ height: '100px' }}
+                  spellCheck="false"
+                  onInput={(e) => setCode(e.target.value)}>
+                  {code}
+                </textarea>
+              </div>
+              <button type="button" className="button" onClick={runCode}>
+                运行代码
+              </button>
+            </div>
+            <a href="vue-sync.html" style={{ marginTop: '100px' }}>
+              点此前往 Vue 状态同步测试
+            </a>
+          </React.Fragment>
+        )
+      }
+
+      const container = document.getElementById('app')
+      const root = ReactDOM.createRoot(container)
+      root.render(<App />)
+    </script>
+  </body>
+</html>
