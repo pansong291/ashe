@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>测试页面</title>
+    <!--    <link rel="stylesheet" href="./css/index.css" />-->
+    <script src="https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js"></script>
+  </head>
+  <body>
+    <div id="app" class="container">
+      <div class="item-line">
+        <p class="item-title">选择语言：</p>
+        <select v-model="state.lang" @change="state.voice = 0">
+          <option v-for="item in langList" :value="item">{{item}}</option>
+        </select>
+      </div>
+      <div class="item-line">
+        <p class="item-title">选择语音：</p>
+        <select v-model="state.voice">
+          <option v-for="(item, index) in localVoiceList[state.lang]" :value="index">{{item.ShortName}}</option>
+        </select>
+      </div>
+      <div class="item-line">
+        <p class="item-title">设置音调：</p>
+        <input class="ipt-number" step="10" v-model.number="state.pitch" type="number" />
+      </div>
+      <div class="item-line">
+        <p class="item-title">设置语速：</p>
+        <input class="ipt-number" step="10" v-model.number="state.rate" type="number" />
+      </div>
+      <div class="item-line">
+        <textarea
+          class="ipt-box"
+          placeholder="请输入要合成的内容"
+          v-model="state.text"
+          @keydown.enter="speak"></textarea>
+      </div>
+      <div class="item-line">
+        <div class="submit-btn" @click="speak">播放语音</div>
+      </div>
+      <div class="item-line">
+        <div class="submit-btn" @click="download">下载语音</div>
+      </div>
+    </div>
+    <script>
+      const { createApp, reactive } = Vue
+      const textEncoder = new TextEncoder()
+      const binaryHeadEnd = textEncoder.encode('Path:audio\r\n').toString()
+
+      // 获取声音列表
+      function getVoiceList() {
+        const _voiceList = reactive({})
+        const _langList = reactive([])
+        fetch(
+          'https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=6A5AA1D4EAFF4E9FB37E23D68491D6F4'
+        )
+          .then((data) => data.json())
+          .then((data) => {
+            data.forEach((item) => {
+              if (!_voiceList[item.Locale]) {
+                _langList.push(item.Locale)
+                _voiceList[item.Locale] = []
+              }
+              _voiceList[item.Locale].push(item)
+            })
+          })
+        return [_voiceList, _langList]
+      }
+
+      // 生成guid
+      function guid() {
+        function gen(count) {
+          let out = ''
+          for (let i = 0; i < count; i++) {
+            out += (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)
+          }
+          return out
+        }
+
+        return gen(8)
+      }
+
+      // 数字转带符号字符串
+      function numToString(num) {
+        return num >= 0 ? `+${num}` : `${num}`
+      }
+
+      const speechConfig = (audioOutputFormat = 'webm-24khz-16bit-mono-opus') =>
+        `X-Timestamp:${new Date()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"true"},"outputFormat":"${audioOutputFormat}"}}}}`
+
+      const ssmlText = ({
+        requestId = guid(),
+        lang = 'zh-CN',
+        voiceName,
+        pitch = '+0',
+        rate = '+0',
+        volume = '+0',
+        text
+      }) =>
+        `X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${new Date()}\r\nPath:ssml\r\n\r\n<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='${lang}'><voice name='${voiceName}'><prosody pitch='${pitch}Hz' rate ='${rate}%' volume='${volume}%'>${text}</prosody></voice></speak>`
+
+      // 获取音频
+      function getAudio(state, localVoiceList) {
+        const bufferList = []
+        return new Promise((resolve, reject) => {
+          if (!state.text) {
+            reject('请输入文字')
+            return
+          }
+          const requestId = guid()
+          const ws = new WebSocket(
+            'wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4'
+          )
+          ws.addEventListener('open', () => {
+            ws.send(speechConfig())
+            ws.send(
+              ssmlText({
+                requestId,
+                text: state.text,
+                lang: state.lang,
+                voiceName: localVoiceList[state.lang][state.voice].Name,
+                pitch: numToString(state.pitch),
+                rate: numToString(state.rate)
+              })
+            )
+          })
+          ws.addEventListener('message', async ({ data }) => {
+            if (data instanceof Blob) {
+              const view = new Uint8Array(await data.arrayBuffer())
+              bufferList.push(
+                ...view
+                  .toString()
+                  .split(binaryHeadEnd)[1]
+                  .split(',')
+                  .slice(1)
+                  .map((i) => +i)
+              )
+              if (view[0] === 0x00 && view[1] === 0x67 && view[2] === 0x58) {
+                ws.close(1000)
+              }
+            }
+          })
+          ws.addEventListener('error', (err) => {
+            console.log('------出错了', err)
+            reject(err)
+          })
+          ws.addEventListener('close', (event) => {
+            if (event.code !== 1000) {
+              console.error('----关闭了', event)
+              reject(event.code)
+              return
+            }
+            const blob = new Blob([new Uint8Array(bufferList)], { type: 'audio/webm' })
+            resolve(URL.createObjectURL(blob))
+          })
+        })
+      }
+
+      createApp({
+        setup() {
+          const state = reactive({
+            text: '请输入要合成的内容',
+            pitch: 0,
+            rate: 0,
+            volume: 0,
+            lang: 'zh-CN',
+            voice: 0
+          })
+          const [localVoiceList, langList] = getVoiceList()
+
+          function speak() {
+            getAudio(state, localVoiceList)
+              .then((url) => {
+                const audio = new Audio(url)
+                audio.play()
+              })
+              .catch((err) => {
+                alert(err)
+              })
+          }
+
+          function download() {
+            getAudio(state, localVoiceList)
+              .then((url) => {
+                const link = document.createElement('a')
+                link.download = `audio_${Date.now()}.webm`
+                link.href = url
+                link.style = 'display: none'
+                document.body.append(link)
+                link.click()
+                link.remove()
+              })
+              .catch((err) => {
+                alert(err)
+              })
+          }
+
+          return {
+            state,
+            langList,
+            localVoiceList,
+            speak,
+            download
+          }
+        }
+      }).mount('#app')
+    </script>
+  </body>
+</html>
