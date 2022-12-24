@@ -1,76 +1,81 @@
 <!DOCTYPE html>
 <html lang="zh-cmn-Hans">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Portal 2</title>
     <style>
-        a:link {
-            text-decoration: none;
-        }
+      a:link {
+        text-decoration: none;
+      }
 
-        a:hover {
-            text-decoration: underline;
-        }
+      a:hover {
+        text-decoration: underline;
+      }
     </style>
-</head>
-<body>
-<h3>Portal 2 Hammer 制图教程资源</h3>
-<ol></ol>
-</body>
-<script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js" type="text/javascript"></script>
-<script>
+  </head>
+  <body>
+    <h3>Portal 2 Hammer 制图教程资源</h3>
+    <ol></ol>
+  </body>
+  <script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js" type="text/javascript"></script>
+  <script>
     const data = [
-        {
-            title: "一个基础房间",
-            video: "https://www.bilibili.com/video/BV17A411p715/",
-            vmf: ""
-        },
-        {
-            title: "激光与按钮",
-            video: "https://www.bilibili.com/video/BV1yK4y1H71A/",
-            vmf: ""
-        },
-        {
-            title: "方块与触发器",
-            video: "https://www.bilibili.com/video/BV18K4y1S7pv/",
-            vmf: ""
-        },
-        {
-            title: "模型与动画",
-            video: "https://www.bilibili.com/video/BV1oK411c7gH/",
-            vmf: "../../raw/paso4model_animation.vmf"
-        },
-        {
-            title: "消散力场与酸液池",
-            video: "https://www.bilibili.com/video/BV13Q4y1Y7h3/",
-            vmf: "../../raw/paso5fizzler.vmf"
-        },
-        {
-            title: "地图泄漏与发布",
-            video: "https://www.bilibili.com/video/BV173411i7Qz/",
-            vmf: "../../raw/paso6lake_publish.vmf"
-        },
-        {
-            title: "方块掉落器",
-            video: "https://www.bilibili.com/video/BV1uT4y1y7p9/",
-            vmf: "../../raw/paso7cube_dropper.vmf"
-        },
-        {
-            title: "弹射板与蚂蚁线",
-            video: "https://www.bilibili.com/video/BV1o54y1f76J/",
-            vmf: "../../raw/paso8faith_plate.vmf"
-        },
-    ];
+      {
+        title: '一个基础房间',
+        video: 'https://www.bilibili.com/video/BV17A411p715/',
+        vmf: ''
+      },
+      {
+        title: '激光与按钮',
+        video: 'https://www.bilibili.com/video/BV1yK4y1H71A/',
+        vmf: ''
+      },
+      {
+        title: '方块与触发器',
+        video: 'https://www.bilibili.com/video/BV18K4y1S7pv/',
+        vmf: ''
+      },
+      {
+        title: '模型与动画',
+        video: 'https://www.bilibili.com/video/BV1oK411c7gH/',
+        vmf: '../../raw/paso4model_animation.vmf'
+      },
+      {
+        title: '消散力场与酸液池',
+        video: 'https://www.bilibili.com/video/BV13Q4y1Y7h3/',
+        vmf: '../../raw/paso5fizzler.vmf'
+      },
+      {
+        title: '地图泄漏与发布',
+        video: 'https://www.bilibili.com/video/BV173411i7Qz/',
+        vmf: '../../raw/paso6lake_publish.vmf'
+      },
+      {
+        title: '方块掉落器',
+        video: 'https://www.bilibili.com/video/BV1uT4y1y7p9/',
+        vmf: '../../raw/paso7cube_dropper.vmf'
+      },
+      {
+        title: '弹射板与蚂蚁线',
+        video: 'https://www.bilibili.com/video/BV1o54y1f76J/',
+        vmf: '../../raw/paso8faith_plate.vmf'
+      },
+      {
+        title: '升降平台与分段动作机关',
+        video: 'https://www.bilibili.com/video/BV1qP4y1i78d/',
+        vmf: '../../raw/paso9piston.vmf'
+      }
+    ]
     $(function () {
-        var $ol = $('body>ol');
-        var $li;
-        for (var obj of data) {
-            $li = $(`<li><a href="${obj.video}">${obj.title}</a></li>`);
-            if (obj.vmf) {
-                $li.append(` - <a href="${obj.vmf}" download>下载vmf地图文件</a>`);
-            }
-            $ol.append($li);
+      var $ol = $('body>ol')
+      var $li
+      for (var obj of data) {
+        $li = $(`<li><a href="${obj.video}">${obj.title}</a></li>`)
+        if (obj.vmf) {
+          $li.append(` - <a href="${obj.vmf}" download>下载vmf地图文件</a>`)
         }
-    });
-</script>
+        $ol.append($li)
+      }
+    })
+  </script>
 </html>
