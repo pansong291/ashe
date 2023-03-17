@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+    <meta charset="UTF-8">
+    <title>Dot Line Anim</title>
+</head>
+<style>
+    body {
+        margin: 0;
+        overflow: hidden;
+    }
+</style>
+<body>
+<canvas id="canvas"></canvas>
+</body>
+<script>
+    class Point {
+        constructor(context2d, x, y, width, height, horizontalSpeed, verticalSpeed) {
+            this.context2d = context2d
+            this.x = x
+            this.y = y
+            this.w = width
+            this.h = height
+            this.r = 2
+            this.hs = horizontalSpeed
+            this.vs = verticalSpeed
+            this.hf = 0
+            this.vf = 0
+        }
+
+        updateRange(width, height) {
+            this.w = width
+            this.h = height
+        }
+
+        addForce(h, v) {
+            this.hf += h
+            this.vf += v
+        }
+
+        clearForce() {
+            this.hf = 0
+            this.vf = 0
+        }
+
+        draw() {
+            this.context2d.fillStyle = 'white'
+            this.context2d.beginPath()
+            this.context2d.arc(this.x, this.y, this.r, 0, 2 * Math.PI)
+            this.context2d.fill()
+        }
+
+        move(time) {
+            // calculate speed
+            if (this.hf !== 0) {
+                this.hs += this.hf * time
+            }
+            if (this.vf !== 0) {
+                this.vs += this.vf * time
+            }
+            // mark horizontal range and vertical range
+            let hr = -1, vr = -1;
+            // get the position of the next time
+            let x = this.hs * time + this.x
+            let y = this.vs * time + this.y
+
+            const factor = -1
+            // determine which edge
+            if (x < 0) hr = 0
+            else if (x > this.w) hr = this.w
+            // fix speed and position
+            if (hr !== -1) {
+                this.hs = factor * this.hs
+                x = 2 * hr - x
+            }
+            // same with above
+            if (y < 0) vr = 0
+            else if (y > this.h) vr = this.h
+            if (vr !== -1) {
+                this.vs = factor * this.vs
+                y = 2 * vr - y
+            }
+            // get the final position
+            this.x = x
+            this.y = y
+        }
+    }
+
+    class Line {
+        constructor(context2d, p1, p2, max) {
+            this.context2d = context2d
+            this.p1 = p1
+            this.p2 = p2
+            this.max = max
+        }
+
+        draw() {
+            // add repulsive force
+            const factor = 100000
+            const dx = this.p1.x - this.p2.x
+            const dy = this.p1.y - this.p2.y
+            const dist = Math.sqrt(dx ** 2 + dy ** 2)
+            const force = factor / (Math.max(dist, 0.1) ** 2)
+            let hf = force * dx / dist
+            let vf = force * dy / dist
+            this.p1.addForce(hf, vf)
+            this.p2.addForce(-hf, -vf)
+            if (dist >= this.max) return
+            this.context2d.strokeWidth = 1
+            this.context2d.strokeStyle = `rgba(255, 255, 255, ${(this.max - dist) / this.max})`
+            this.context2d.beginPath()
+            this.context2d.moveTo(this.p1.x, this.p1.y)
+            this.context2d.lineTo(this.p2.x, this.p2.y)
+            this.context2d.stroke()
+        }
+
+        distance() {
+            const xDiff = this.p1.x - this.p2.x
+            const yDiff = this.p1.y - this.p2.y
+            return Math.sqrt(xDiff ** 2 + yDiff ** 2)
+        }
+    }
+
+    start(document.getElementById('canvas'))
+
+    function start(canvas, pointCount = 30, maxLen = 400, maxSpeed = 40) {
+        const data = {
+            width: window.innerWidth,
+            height: window.innerHeight
+        }
+        canvas.width = data.width
+        canvas.height = data.height
+
+        function draw(context2d, points = null, lastTime = 0) {
+            requestAnimationFrame(() => {
+                const now = Date.now()
+                if (!points) {
+                    const [randomW, randomH] = createRandom(data.width, data.height)
+                    const randomSpeed = createRandomSpeed(maxSpeed)
+                    points = []
+                    for (let i = 0; i < pointCount; i++) {
+                        points.push(new Point(context2d, randomW(), randomH(), data.width, data.height, randomSpeed(), randomSpeed()))
+                    }
+                    window.onresize = () => {
+                        requestAnimationFrame(() => {
+                            console.log('win resizing...')
+                            data.width = window.innerWidth
+                            data.height = window.innerHeight
+                            canvas.width = data.width
+                            canvas.height = data.height
+                            for (let point of points) {
+                                point.updateRange(data.width, data.height)
+                            }
+                        })
+                    }
+                } else {
+                    for (const point of points) {
+                        point.move((now - lastTime) / 1000)
+                        point.clearForce()
+                    }
+                }
+                context2d.fillStyle = '#2b2b2b'
+                context2d.fillRect(0, 0, data.width, data.height)
+                for (let i = 0; i < points.length; i++) {
+                    for (let j = i + 1; j < points.length; j++) {
+                        new Line(context2d, points[i], points[j], maxLen).draw()
+                    }
+                    points[i].draw()
+                }
+                draw(context2d, points, now)
+            })
+        }
+
+        draw(canvas.getContext('2d'))
+    }
+
+    function createRandom(...max) {
+        return max.map(m => (() => random(0, m)))
+    }
+
+    function createRandomSpeed(max) {
+        return () => {
+            return random(-max, max + 1)
+        }
+    }
+
+    function random(min, max) {
+        return Math.floor(Math.random() * (max - min) + min)
+    }
+</script>
+</html>
