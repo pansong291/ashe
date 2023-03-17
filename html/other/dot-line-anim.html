@@ -15,7 +15,7 @@
 </body>
 <script>
     class Point {
-        constructor(context2d, x, y, width, height, horizontalSpeed, verticalSpeed) {
+        constructor(context2d, x, y, width, height, horizontalSpeed, verticalSpeed, maxSpeed) {
             this.context2d = context2d
             this.x = x
             this.y = y
@@ -24,6 +24,7 @@
             this.r = 2
             this.hs = horizontalSpeed
             this.vs = verticalSpeed
+            this.maxSpeed = maxSpeed
             this.hf = 0
             this.vf = 0
         }
@@ -64,20 +65,19 @@
             let x = this.hs * time + this.x
             let y = this.vs * time + this.y
 
-            const factor = -1
             // determine which edge
             if (x < 0) hr = 0
             else if (x > this.w) hr = this.w
             // fix speed and position
             if (hr !== -1) {
-                this.hs = factor * this.hs
+                this.hs = (Math.abs(this.hs) >= this.maxSpeed ? -0.5 : -1) * this.hs
                 x = 2 * hr - x
             }
             // same with above
             if (y < 0) vr = 0
             else if (y > this.h) vr = this.h
             if (vr !== -1) {
-                this.vs = factor * this.vs
+                this.vs = (Math.abs(this.vs) >= this.maxSpeed ? -0.5 : -1) * this.vs
                 y = 2 * vr - y
             }
             // get the final position
@@ -139,7 +139,7 @@
                     const randomSpeed = createRandomSpeed(maxSpeed)
                     points = []
                     for (let i = 0; i < pointCount; i++) {
-                        points.push(new Point(context2d, randomW(), randomH(), data.width, data.height, randomSpeed(), randomSpeed()))
+                        points.push(new Point(context2d, randomW(), randomH(), data.width, data.height, randomSpeed(), randomSpeed(), maxSpeed))
                     }
                     window.onresize = () => {
                         requestAnimationFrame(() => {
