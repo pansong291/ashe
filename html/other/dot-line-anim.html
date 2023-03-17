@@ -112,12 +112,6 @@
         this.context2d.lineTo(this.p2.x, this.p2.y)
         this.context2d.stroke()
       }
-
-      distance() {
-        const xDiff = this.p1.x - this.p2.x
-        const yDiff = this.p1.y - this.p2.y
-        return Math.sqrt(xDiff ** 2 + yDiff ** 2)
-      }
     }
 
     start(document.getElementById('canvas'))
@@ -169,7 +163,7 @@
               point.clearForce()
             }
           }
-          context2d.fillStyle = '#2b2b2b'
+          context2d.fillStyle = 'black'
           context2d.fillRect(0, 0, data.width, data.height)
           for (let i = 0; i < points.length; i++) {
             for (let j = i + 1; j < points.length; j++) {
