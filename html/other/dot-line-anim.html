@@ -99,7 +99,7 @@
         const dy = this.p1.y - this.p2.y
         const dist = Math.sqrt(dx ** 2 + dy ** 2)
         const factor = 100000
-        const force = factor / Math.max(dist, 0.1) ** 2
+        const force = factor / Math.max(dist, 0.01) ** 2
         let hf = (force * dx) / dist
         let vf = (force * dy) / dist
         this.p1.addForce(hf, vf)
@@ -116,7 +116,7 @@
 
     start(document.getElementById('canvas'))
 
-    function start(canvas, pointCount = 30, maxLen = 400, maxSpeed = 100) {
+    function start(canvas, pointCount = 40, maxLen = 400, maxSpeed = 100) {
       const data = {
         width: window.innerWidth,
         height: window.innerHeight
