@@ -85,33 +85,31 @@
       }
     }
 
-    class Line {
-      constructor(context2d, p1, p2, max) {
-        this.context2d = context2d
-        this.p1 = p1
-        this.p2 = p2
-        this.max = max
-      }
+    function distance(p1, p2) {
+      const dx = p1.x - p2.x
+      const dy = p1.y - p2.y
+      return Math.sqrt(dx ** 2 + dy ** 2)
+    }
 
-      draw() {
-        // add repulsive force
-        const dx = this.p1.x - this.p2.x
-        const dy = this.p1.y - this.p2.y
-        const dist = Math.sqrt(dx ** 2 + dy ** 2)
-        const factor = 100000
-        const force = factor / Math.max(dist, 0.01) ** 2
-        let hf = (force * dx) / dist
-        let vf = (force * dy) / dist
-        this.p1.addForce(hf, vf)
-        this.p2.addForce(-hf, -vf)
-        if (dist >= this.max) return
-        this.context2d.strokeWidth = 1
-        this.context2d.strokeStyle = `rgba(255, 255, 255, ${(this.max - dist) / this.max})`
-        this.context2d.beginPath()
-        this.context2d.moveTo(this.p1.x, this.p1.y)
-        this.context2d.lineTo(this.p2.x, this.p2.y)
-        this.context2d.stroke()
-      }
+    /**
+     * add repulsive forces
+     */
+    function superimposeForce(p1, p2, dist, factor = 100_000) {
+      const force = factor / Math.max(dist, 0.01) ** 2
+      let hf = (force * (p1.x - p2.x)) / dist
+      let vf = (force * (p1.y - p2.y)) / dist
+      p1.addForce(hf, vf)
+      p2.addForce(-hf, -vf)
+    }
+
+    function drawLine(context2d, p1, p2, alpha) {
+      if (alpha <= 0) return
+      context2d.strokeWidth = 1
+      context2d.strokeStyle = `rgba(255, 255, 255, ${alpha})`
+      context2d.beginPath()
+      context2d.moveTo(p1.x, p1.y)
+      context2d.lineTo(p2.x, p2.y)
+      context2d.stroke()
     }
 
     start(document.getElementById('canvas'))
@@ -167,7 +165,11 @@
           context2d.fillRect(0, 0, data.width, data.height)
           for (let i = 0; i < points.length; i++) {
             for (let j = i + 1; j < points.length; j++) {
-              new Line(context2d, points[i], points[j], maxLen).draw()
+              const p1 = points[i],
+                p2 = points[j]
+              const dist = distance(p1, p2)
+              superimposeForce(p1, p2, dist)
+              drawLine(context2d, p1, p2, (maxLen - dist) / maxLen)
             }
             points[i].draw()
           }
