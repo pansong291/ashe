@@ -2,7 +2,7 @@
 // @name         thz-helper
 // @description  thz forum helper
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.0.1
 // @author       paso
 // @match        http://96thz.cc/*
 // @match        http://www.example.com/
@@ -25,19 +25,6 @@
   }
 
   function handleTarget(server) {
-    const DEFAULT_DATA = function () {
-      return {
-        executeSelector: '#discuz_tips',
-        path: '/forum.php',
-        params: {
-          fid: '181',
-          filter: 'typeid',
-          typeid: '',
-          orderby: 'heats'
-        },
-        search: ''
-      }
-    }
     const CONTEXT = {
       env: 'prod',
       dev: {
@@ -55,7 +42,29 @@
         }
       }
     }
+    const DEFAULT_DATA = function () {
+      return {
+        executeSelector: '#discuz_tips',
+        path: '/forum.php',
+        params: {
+          fid: '181',
+          filter: 'typeid',
+          typeid: '',
+          orderby: 'heats'
+        },
+        search: ''
+      }
+    }
     const storage = StorageClient(server)
+    const querySearch = resolveQuerySearch()
+    const hiddenSelector = {
+      forumdisplay:
+        '.a_fl, .a_fr, #toptb + div[align=center], #diynavtop, #toptb, #hd, #ft, #f_pst, #newspecial, #autopbn',
+      viewthread:
+        '.a_fl, .a_fr, #toptb + div[align=center], #diynavtop, #toptb, #hd, #ft, #f_pst, #newspecial, #pgt, .pgt, .pgbtn, #hiddenpoststip, #postlist > div[id] + div[id], .pgs',
+      index:
+        '.a_fl, .a_fr, #toptb + div[align=center], #diynavtop, #toptb, #hd, #ft, #f_pst, #newspecial, #autopbn, #ct > .mn > style + div, #ct > .mn > div + table'
+    }
 
     const POPUP_INJECT_CONFIG = {
       namespace,
@@ -124,7 +133,7 @@
           <SelectFormItem title="path" v-model:value="path" hideSelect="true" />
           <SelectFormItem title="板块" v-model:value="params.fid" :options="forms.fidOptions" />
           <SelectFormItem title="筛选" v-model:value="params.filter" :options="forms.filterOptions" hideInput="true" />
-          <SelectFormItem title="系列" v-if="params.filter === 'typeid'" v-model:value="params.typeid" :options="forms.typeidOptions" />
+          <SelectFormItem title="系列" v-if="params.filter === 'typeid'" v-model:value="params.typeid" :options="forms.typeidOptions[params.fid]" />
           <SelectFormItem title="排序" v-model:value="params.orderby" :options="forms.orderbyOptions" hideInput="true" />
           <SelectFormItem title="搜索" v-model:value="search" hideSelect="true" />
       </div>
@@ -137,17 +146,150 @@
         return {
           ...DEFAULT_DATA(),
           forms: {
-            fidOptions: [{ value: '181', label: '亚洲無碼原創' }],
-            filterOptions: [{ value: 'typeid', label: '系列' }],
-            typeidOptions: [
-              { value: '', label: '全部' },
-              { value: '35', label: '一本道' },
-              { value: '36', label: '加勒比' },
-              { value: '37', label: '东京热' },
-              { value: '37', label: 'HEYZO' },
-              { value: '664', label: 'FC2PPV' },
-              { value: '770', label: '麻豆传媒' }
+            fidOptions: [
+              { value: '181', label: '亚洲無碼原創' },
+              { value: '220', label: '亚洲有碼原創' },
+              { value: '182', label: '欧美無碼' },
+              { value: '69', label: '国内原创(BT)' },
+              { value: '203', label: '各类合集资源' },
+              { value: '177', label: '蓝光高清原盘' },
+              { value: '39', label: '日韩情色(BT)' },
+              { value: '172', label: '桃花原創合集（BT）' }
             ],
+            filterOptions: [{ value: 'typeid', label: '系列' }],
+            typeidOptions: {
+              181: [
+                { value: '', label: '全部' },
+                { value: '664', label: 'FC2PPV' },
+                { value: '33', label: '美女步兵' },
+                { value: '35', label: '一本道系' },
+                { value: '36', label: '加勒比系' },
+                { value: '64', label: '1919go' },
+                { value: '39', label: '10musu' },
+                { value: '47', label: '性孽變態' },
+                { value: '53', label: '素人系列' },
+                { value: '37', label: '东京热系' },
+                { value: '38', label: 'HEYZO' },
+                { value: '116', label: 'MuraTV' },
+                { value: '67', label: 'HeYPPV' },
+                { value: '50', label: '仟人斬系' },
+                { value: '51', label: '金髪天國' },
+                { value: '52', label: '盜撮系列' },
+                { value: '49', label: 'ガチん娘' },
+                { value: '40', label: '人妻熟女' },
+                { value: '319', label: 'pacoma' },
+                { value: '195', label: '無毛宣言' },
+                { value: '194', label: 'メス豚系' },
+                { value: '226', label: 'RealDiva' },
+                { value: '114', label: 'XXX-AV' },
+                { value: '196', label: '誘惑天国' },
+                { value: '198', label: '经典稀缺' },
+                { value: '200', label: '問答無用' },
+                { value: '44', label: 'JavHD' },
+                { value: '321', label: 'h4610系' },
+                { value: '322', label: '素人妻系' },
+                { value: '320', label: '人妻斬系' },
+                { value: '501', label: 'AV志向系' },
+                { value: '616', label: '店長推薦' },
+                { value: '731', label: '本生素人' },
+                { value: '48', label: '3D影畫' },
+                { value: '523', label: 'H:G:M:O' },
+                { value: '222', label: '写真专辑' },
+                { value: '768', label: '无码流出' },
+                { value: '770', label: '麻豆传媒' }
+              ],
+              220: [
+                { value: '', label: '全部' },
+                { value: '91', label: '高清騎兵' },
+                { value: '92', label: '美女騎兵' },
+                { value: '109', label: '美素人系' },
+                { value: '110', label: '剧情系列' },
+                { value: '221', label: '无损原盘' }
+              ],
+              182: [
+                { value: '', label: '全部' },
+                { value: '41', label: 'x-Art' },
+                { value: '42', label: 'Wow' },
+                { value: '43', label: 'bangbros' },
+                { value: '45', label: 'brazzers' },
+                { value: '120', label: 'naughtyamerica' },
+                { value: '122', label: 'babes' },
+                { value: '46', label: 'realitykings' },
+                { value: '115', label: 'DDF' },
+                { value: '111', label: '按摩师系' },
+                { value: '214', label: 'twistys' },
+                { value: '121', label: 'nubilefilms' },
+                { value: '197', label: 'hegre-art' },
+                { value: '227', label: 'wicked' },
+                { value: '150', label: 'BDSM' },
+                { value: '216', label: '邪惡天使' },
+                { value: '219', label: 'vixen' },
+                { value: '220', label: 'passion-hd' },
+                { value: '223', label: '18yoga' },
+                { value: '224', label: 'private' },
+                { value: '193', label: 'joymii' },
+                { value: '201', label: '21members' },
+                { value: '202', label: 'colette' },
+                { value: '213', label: 'mofos' },
+                { value: '215', label: 'nubiles' },
+                { value: '217', label: 'blacked' },
+                { value: '225', label: 'sexart' },
+                { value: '199', label: 'Femjoy' },
+                { value: '228', label: 'digitalplayground' },
+                { value: '496', label: '18xgirls' },
+                { value: '497', label: 'teamskeet' },
+                { value: '498', label: 'sexyhub' },
+                { value: '499', label: 'fakehub' },
+                { value: '500', label: 'realitygang' },
+                { value: '218', label: 'julesjordan' },
+                { value: '513', label: 'TUSHY' },
+                { value: '605', label: 'ANALIZED' },
+                { value: '615', label: 'HARDX' },
+                { value: '730', label: 'nubiles-porn' },
+                { value: '732', label: 'lubed' },
+                { value: '769', label: 'deeper' },
+                { value: '87', label: 'SM变态' },
+                { value: '88', label: '其它分类' },
+                { value: '86', label: '肛交天堂' }
+              ],
+              69: [
+                { value: '', label: '全部' },
+                { value: '9', label: '国内无码' },
+                { value: '10', label: '国内偷拍' },
+                { value: '11', label: '主播探花' },
+                { value: '65', label: '美女资源' },
+                { value: '192', label: '国模私拍' }
+              ],
+              203: [
+                { value: '', label: '全部' },
+                { value: '55', label: '亚洲无码' },
+                { value: '56', label: '亚洲有码' },
+                { value: '57', label: '欧美情色' },
+                { value: '63', label: '其他资源' }
+              ],
+              177: [
+                { value: '', label: '全部' },
+                { value: '27', label: '亚洲无码' },
+                { value: '28', label: '亚洲有码' },
+                { value: '29', label: '欧美情色' },
+                { value: '30', label: '其他原盘' }
+              ],
+              39: [
+                { value: '', label: '全部' },
+                { value: '1', label: '无码' },
+                { value: '2', label: '有码' }
+              ],
+              172: [
+                { value: '', label: '全部' },
+                { value: '18', label: '亚洲无码' },
+                { value: '19', label: '亚洲有码' },
+                { value: '20', label: '中文字幕' },
+                { value: '21', label: '欧美情色' },
+                { value: '22', label: '伦理电影' },
+                { value: '23', label: '美女写真' },
+                { value: '24', label: '成人动漫' }
+              ]
+            },
             orderbyOptions: [
               { value: 'heats', label: '最热' },
               { value: 'lastpost', label: '最新' },
@@ -168,7 +310,7 @@
               },
               search: this.search
             })
-            .then(() => (window.location = getPageLocation(this.path, this.params, '1')))
+            .then(() => (window.location = getPageLocation(this.path, this.params, querySearch.page || '1')))
         }
       },
       mounted() {
@@ -215,9 +357,7 @@
 
     function handlePageContent(data) {
       // 隐藏广告
-      const list = document.querySelectorAll(
-        '.a_fl, .a_fr, #toptb + div[align=center], #diynavtop, #toptb, #hd, #ft, #f_pst, #newspecial, #autopbn'
-      )
+      const list = document.querySelectorAll(hiddenSelector[querySearch.mod || 'index'])
       list?.forEach((el) => {
         el.setAttribute('style', 'display: none !important;')
       })
@@ -279,7 +419,7 @@
           filterCb.classList.add(namespace)
           filterCb.type = 'checkbox'
           const label = document.createElement('label')
-          label.append(filterCb, document.createTextNode('过滤'))
+          label.append(filterCb, document.createTextNode('只看搜索结果'))
           tf.append(document.createTextNode('\xA0'), label)
         }
         filterCb.checked = !!search
@@ -289,6 +429,47 @@
         }
       }
     }
+
+    if (CONTEXT.env === 'dev') {
+      window._$_getTypes = function () {
+        const arr = []
+        document.querySelectorAll('ul#thread_types > li > a')?.forEach((a) => {
+          const item = { value: '' }
+          if (a.firstChild && a.firstChild instanceof Text) {
+            item.label = a.firstChild.wholeText
+          }
+          if (a.href) {
+            const i = a.href.indexOf('?')
+            if (i >= 0) {
+              const qs = resolveQuerySearch(a.href.substring(i))
+              item.value = qs.typeid || ''
+            }
+          }
+          arr.push(item)
+        })
+        console.log(arr)
+        console.log(JSON.stringify(arr))
+      }
+    }
+  }
+
+  function resolveQuerySearch(search) {
+    const result = {}
+    search = search || window.location.search
+    if (search) {
+      if (search.startsWith('?')) {
+        search = search.substring(1)
+      }
+      search
+        .split('&')
+        .map((entry) => {
+          return entry.split('=')
+        })
+        .forEach((entry) => {
+          result[entry[0]] = entry[1]
+        })
+    }
+    return result
   }
 
   function loadJS(src) {
