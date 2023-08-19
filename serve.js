@@ -198,30 +198,32 @@ function getIPAddress() {
 
 var ipAddress = getIPAddress()
 
-http
-  .createServer(function (req, res) {
-    // if we're looking for root, serve index.html
-    var u = url.parse(req.url)
-    var path = u.pathname
+var controller = function (req, res) {
+  // if we're looking for root, serve index.html
+  var u = url.parse(req.url)
+  var path = u.pathname
 
-    if (path === '/') {
-      path = '/index.html'
+  if (path === '/') {
+    path = '/index.html'
+  }
+
+  // look for the static document requested
+  // if it's not found, return a 404
+  fs.readFile('.' + path, function (err, data) {
+    if (err) {
+      res.writeHead(404)
+      res.end()
+      return
     }
 
-    // look for the static document requested
-    // if it's not found, return a 404
-    fs.readFile('.' + path, function (err, data) {
-      if (err) {
-        res.writeHead(404)
-        res.end()
-        return
-      }
-
-      // return the document
-      res.writeHead(200, { 'Content-Type': mime.lookupExtension(require('path').extname(path)) })
-      res.end(data)
-    })
+    // return the document
+    res.writeHead(200, { 'Content-Type': mime.lookupExtension(require('path').extname(path)) })
+    res.end(data)
   })
-  .listen(3000, ipAddress)
+}
 
-console.log(`Opened server on http://${ipAddress}:3000/`)
+http.createServer(controller).listen(3000, () => console.log('Local server is running at http://localhost:3000/'))
+
+http
+  .createServer(controller)
+  .listen(3000, ipAddress, () => console.log(`LAN server is running at http://${ipAddress}:3000/`))
