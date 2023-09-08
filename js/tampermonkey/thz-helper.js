@@ -2,7 +2,7 @@
 // @name         thz-helper
 // @description  thz论坛 98堂论坛
 // @namespace    http://tampermonkey.net/
-// @version      1.0.2
+// @version      1.0.3
 // @author       paso
 // @match        http://96thz.cc/*
 // @match        http://97thz.cc/*
