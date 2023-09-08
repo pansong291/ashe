@@ -6,6 +6,7 @@
 // @author       paso
 // @match        http://96thz.cc/*
 // @match        http://97thz.cc/*
+// @match        http://98thz.cc/*
 // @match        https://wpzo.app/*
 // @match        *://www.example.net/*
 // @require      https://greasyfork.org/scripts/473442-cross-origin-storage/code/cross-origin-storage.js?version=1237609
