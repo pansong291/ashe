@@ -2,12 +2,13 @@
 // @name         thz-helper
 // @description  thz论坛 98堂论坛
 // @namespace    http://tampermonkey.net/
-// @version      1.0.4
+// @version      1.0.5
 // @author       paso
 // @match        http://96thz.cc/*
 // @match        http://97thz.cc/*
 // @match        http://98thz.cc/*
 // @match        http://thzb.cc/*
+// @match        http://thzv.cc/*
 // @match        https://wpzo.app/*
 // @match        *://www.example.net/*
 // @require      https://greasyfork.org/scripts/473442-cross-origin-storage/code/cross-origin-storage.js?version=1237609
