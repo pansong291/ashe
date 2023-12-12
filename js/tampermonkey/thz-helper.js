@@ -12,7 +12,7 @@
 // @match        https://wpzo.app/*
 // @match        *://www.example.net/*
 // @require      https://greasyfork.org/scripts/473442-cross-origin-storage/code/cross-origin-storage.js?version=1237609
-// @require      https://greasyfork.org/scripts/473443-popup-inject/code/popup-inject.js?version=1237616
+// @require      https://update.greasyfork.org/scripts/473443/1294140/popup-inject.js
 // @grant        none
 // @license      MIT
 // ==/UserScript==
