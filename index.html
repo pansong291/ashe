@@ -1,58 +1,69 @@
 <!DOCTYPE html>
 <html lang="zh-cmn-Hans">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <title>主页</title>
-    <style type="text/css" rel="stylesheet">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title>主页</title>
+  <style type="text/css" rel="stylesheet">
       label {
-        user-select: none;
+          user-select: none;
       }
-    </style>
-  </head>
+  </style>
+</head>
 
-  <body>
-    <h2>工具</h2>
-    <ul>
-      <li>
-        <a href="html/tool/JianyingPro.html">剪映字幕导出工具</a>
-      </li>
-    </ul>
-    <h2>娱乐</h2>
-    <ul>
-      <li>
-        <a href="html/game/minesweeper.html">扫雷</a>
-      </li>
-      <li>
-        <a href="html/game/gobang.html">五子棋</a>
-      </li>
-      <li>
-        <a href="https://tool.yijingying.com/">Healer的工具箱</a>
-      </li>
-    </ul>
-    <h2>其他</h2>
-    <ul>
-      <li>
-        <a href="html/other/RedBlackTree.html">红黑树动画在线演示</a>
-      </li>
-      <li>
-        <a href="html/other/portal2.html">Portal 2 制图教程</a>
-      </li>
-      <li>
-        <a href="html/other/regex-30-minutes.html">正则表达式30分钟入门教程</a>
-      </li>
-      <li>
-        <a href="html/other/dot-line-anim.html">星星连线</a>
-      </li>
-    </ul>
-    <h2>测试</h2>
-    <ul>
-      <li>
-        <a href="html/test/vue-sync.html">Vue 状态同步测试</a>
-      </li>
-      <li>
-        <a href="html/test/react-sync.html">React 状态同步测试</a>
-      </li>
-    </ul>
-  </body>
+<body>
+<script>
+  const menus = [
+    {
+      category: "工具",
+      items: [
+        { title: "剪映字幕导出工具", src: "html/tool/JianyingPro.html" },
+        { title: "在线乱码恢复", src: "html/tool/messy-code-recovery.html" },
+        { title: "ff98sha 的工具箱", src: "https://www.ff98sha.me/tools-index" },
+        { title: "刘明野的工具箱", src: "https://tool.liumingye.cn/" },
+        { title: "Healer 的工具箱", src: "https://tool.yijingying.com/" }
+      ]
+    },
+    {
+      category: "娱乐",
+      items: [
+        { title: "扫雷", src: "html/game/minesweeper.html" },
+        { title: "五子棋", src: "html/game/gobang.html" }
+      ]
+    },
+    {
+      category: "其他",
+      items: [
+        { title: "红黑树动画在线演示", src: "html/other/RedBlackTree.html" },
+        { title: "Portal 2 制图教程", src: "html/other/portal2.html" },
+        { title: "正则表达式 30 分钟入门教程", src: "html/other/regex-30-minutes.html" },
+        { title: "星星连线", src: "html/other/dot-line-anim.html" }
+      ]
+    },
+    {
+      category: "测试",
+      items: [
+        { title: "Vue 状态同步测试", src: "html/test/vue-sync.html" },
+        { title: "React 状态同步测试", src: "html/test/react-sync.html" }
+      ]
+    }
+  ]
+  const div = document.createElement("div")
+  for (const menu of menus) {
+    const category = document.createElement("h3")
+    category.innerText = menu.category
+    const ul = document.createElement("ul")
+    for (const item of menu.items) {
+      const li = document.createElement("li")
+      const a = document.createElement("a")
+      a.href = item.src
+      a.innerText = item.title
+      li.append(a)
+      ul.append(li)
+    }
+    div.append(category, ul)
+  }
+  document.body.append(div)
+</script>
+</body>
 </html>

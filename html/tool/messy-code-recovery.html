@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=0" />
+  <meta name="description" content="在线乱码恢复">
+  <meta name="viewport" content="width=device-width" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="keywords" content="乱码恢复,编码转换,在线,乱码" />
+  <meta content="text/html; charset=utf-8" />
+  <title>在线乱码恢复</title>
+  <style>
+    #input-div {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+    }
+    #input-div button {
+        padding: 6px 12px;
+        font-size: 14px;
+    }
+  </style>
+  <script type="text/javascript" src="../../js/lib/iconv/iconv.js"></script>
+  <script type="text/javascript">
+    //单字节尝试逐一修复
+    function transSingle(str, original_code, read_code) {
+      const numArr = []
+      for (let i = 0, len = str.length; i < len; i++) {
+        const num = str[i].charCodeAt(0)
+        if (num < 128) {
+          numArr[i] = num
+        } else {
+          const numU = iconv.encode(str[i], read_code)
+          if (numU[0] === 63) {
+            numArr[i] = str[i].charCodeAt(0)
+          } else {
+            numArr[i] = numU[0]
+          }
+        }
+      }
+      return iconv.decode(numArr, original_code)
+    }
+
+
+    function transMulti(str, original_code, read_code) {
+      return iconv.decode(iconv.encode(str, read_code), original_code)
+    }
+
+    function get_result() {
+      const code_byte = {
+        "Shift_JIS": 2,
+        "GBK": 2,
+        "windows-1252": 1,
+        "ISO-8859-1": 1,
+        "EUC-KR": 2,
+        "Big5": 2,
+        "utf-8": 2
+      }
+
+      const code_list = ["Shift_JIS", "GBK", "utf-8", "windows-1252", "ISO-8859-1", "EUC-KR", "Big5"]
+      const s = document.getElementById("input-area").value
+      let outputDiv_html = "<table width='100%' border='0' align='center' cellpadding='4' cellspacing='1'><tbody><tr align='center'><td width='15%'><b>原编码</b></td><td width='15%'><b>错误的读取编码</b></td><td><b>恢复结果</b></td></tr>"
+      let counter = 1
+      for (let i = 0, len = code_list.length; i < len; i++) {
+        for (let j = 0; j < len; j++) {
+          if (i !== j) {
+            const original_code = code_list[i]
+            const read_code = code_list[j]
+            const trans_id = original_code + "_" + read_code
+            let new_element_html = "<tr align='center' bgcolor='#CCEEFF'><td>original_code</td><td>read_code</td><td><textarea id='original_code_read_code' rows='5' cols='100'>output_textarea_value</textarea></td></tr>"
+            new_element_html = new_element_html.replace("original_code_read_code", trans_id)
+            new_element_html = new_element_html.replace("original_code", original_code).replace("read_code", read_code)
+            if (counter % 2 === 0) {
+              new_element_html = new_element_html.replace("CCEEFF", "FFFFFF")
+            }
+            counter++
+
+            let o
+            if (code_byte[read_code] === 1) {
+              o = transSingle(s, original_code, read_code)
+            } else {
+              o = transMulti(s, original_code, read_code)
+            }
+
+            new_element_html = new_element_html.replace("output_textarea_value", o)
+
+            outputDiv_html += new_element_html
+          }
+        }
+      }
+      outputDiv_html += "</div></tbody></table>"
+      document.getElementById("output-div").innerHTML = outputDiv_html
+    }
+  </script>
+</head>
+
+<body>
+<div id="input-div">
+  <textarea id="input-area" rows="3" cols="100" placeholder="请输入乱码文字">涔辩爜娴嬭瘯鏂囨湰</textarea>
+  <button type="button" onclick="get_result();">转换</button>
+</div>
+<div id="output-div"></div>
+<!--
+来源：
+https://www.ff98sha.me/tools/messycode/
+https://www.snow-plus.net/simple/index.php?t898964.html
+https://pan.baidu.com/s/1fH3s091XXj_tGYGzS8eUNw?pwd=8nig
+http://www.mytju.com/classcode/tools/messyCodeRecover.asp 这玩意23年访问不了，只能找个新的了
+ -->
+</body>
+</html>
