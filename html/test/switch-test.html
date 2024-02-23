@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+    <meta charset="UTF-8">
+    <title>Switcher</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .switch {
+            position: relative;
+            width: 64px;
+            height: 24px;
+            border-radius: 12px;
+            padding: 2px;
+            box-sizing: border-box;
+            cursor: pointer;
+            transition: .3s background-color;
+            background-color: #bbb;
+        }
+
+        .slider {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            box-shadow: 0 0 4px 0 #00000040;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+        }
+
+        .switch:hover {
+            background-color: #898989;
+        }
+
+        .switch.on {
+            background-color: #3d7fff;
+        }
+
+        .switch.on:hover {
+            background-color: #669eff;
+        }
+
+        .transition-left {
+            transition: .3s left;
+        }
+    </style>
+</head>
+<body>
+<h2>滑块可拖动的 Switch 开关</h2>
+<div class="switch">
+    <div class="slider transition-left"></div>
+</div>
+</body>
+<script>
+    const slider = document.querySelector('.slider')
+    const switcher = document.querySelector('.switch')
+    const data = {
+        down: {x: 0, left: 0},
+        move: false,
+        limit: {min: 0, max: 0}
+    }
+
+    const sliderMouseMove = (e) => {
+        data.move = true
+        let v = e.pageX - data.down.x + data.down.left
+        if (data.limit.min > v) {
+            v = data.limit.min
+        }
+        if (v > data.limit.max) {
+            v = data.limit.max
+        }
+        requestAnimationFrame(() => {
+            slider.style.left = `${v}px`
+        })
+    }
+
+    const sliderMouseUp = () => {
+        slider.classList.add('transition-left')
+        const selfStyle = window.getComputedStyle(slider)
+        const left = getNumber(selfStyle.left)
+        const half = (data.limit.min + data.limit.max) / 2
+        const v = left < half ? data.limit.min : data.limit.max
+        switcher.classList[left >= half ? 'add' : 'remove']('on')
+        requestAnimationFrame(() => {
+            slider.style.left = `${v}px`
+        })
+        document.removeEventListener('mousemove', sliderMouseMove)
+        document.removeEventListener('mouseup', sliderMouseUp)
+    }
+
+    slider.addEventListener('mousedown', (e) => {
+        slider.classList.remove('transition-left')
+        data.move = false
+        data.down.x = e.pageX
+        document.addEventListener('mousemove', sliderMouseMove)
+        document.addEventListener('mouseup', sliderMouseUp)
+    })
+
+    switcher.addEventListener('mousedown', () => {
+        const selfStyle = window.getComputedStyle(switcher)
+        data.limit.min = getNumber(selfStyle.paddingLeft)
+        data.limit.max = switcher.clientWidth - getNumber(selfStyle.paddingRight) - slider.offsetWidth
+        const sliderStyle = window.getComputedStyle(slider)
+        data.down.left = getNumber(sliderStyle.left)
+    })
+
+    slider.addEventListener('click', (e) => {
+        if (data.move) e.stopPropagation()
+    })
+
+    switcher.addEventListener('click', () => {
+        const half = (data.limit.min + data.limit.max) / 2
+        const v = data.down.left >= half ? data.limit.min : data.limit.max
+        switcher.classList[data.down.left < half ? 'add' : 'remove']('on')
+        requestAnimationFrame(() => {
+            slider.style.left = `${v}px`
+        })
+    }, false)
+
+    function getNumber(str) {
+        let mArr = String(str).match(/[-+]?(\d+(\.\d*)?|\.\d+)/)
+        if (mArr && mArr.length) {
+            return parseFloat(mArr[0])
+        }
+        return 0
+    }
+</script>
+</html>
