@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .flex {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .input-wrap {
+            position: relative;
+            padding-top: 20px;
+        }
+
+        .input-wrap label {
+            position: absolute;
+            font-size: 18px;
+            color: #a3a3a3;
+            left: 8px;
+            top: 26px;
+            transition: all 200ms ease;
+            pointer-events: none;
+        }
+
+        .input-wrap .bar {
+            position: absolute;
+            width: 0;
+            height: 2px;
+            background: #3d7fff;
+            left: 50%;
+            bottom: 0;
+            transform: translateX(-50%);
+            transition: all 200ms ease;
+        }
+
+        .input-wrap input[type='text'] {
+            padding: 0 4px;
+            width: 240px;
+            height: 30px;
+            font-size: 18px;
+            outline: none;
+            border: none;
+            border-bottom: 1px solid #a3a3a3;
+        }
+
+        .input-wrap input[type='text']:focus ~ label,
+        .input-wrap input[type='text']:valid ~ label {
+            left: 4px;
+            top: 0;
+            font-size: 14px;
+            color: #3d7fff;
+        }
+
+        .input-wrap input[type='text']:focus ~ .bar {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+<h2>仿 Material 输入框</h2>
+<div class="flex">
+    <div class="input-wrap">
+        <input id="input-user-name" type="text" required>
+        <label for="input-user-name">User Name</label>
+        <span class="bar"></span>
+    </div>
+</div>
+</body>
+</html>
