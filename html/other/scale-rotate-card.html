@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+    <meta charset="UTF-8">
+    <title>Scale Rotate Card</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .wrapper {
+            perspective: 400px;
+        }
+
+        .card {
+            min-height: 200px;
+            padding: 48px;
+            border-radius: 8px;
+            background-color: #333;
+            box-shadow: 0 2px 8px 0 #666;
+            transition-property: transform, box-shadow;
+            transition-duration: .1s;
+            transition-timing-function: ease-out;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 24px 0 #333;
+        }
+    </style>
+</head>
+<body>
+<h2>带有 3D 旋转缩放效果的卡片</h2>
+<div class="wrapper">
+    <div class="card">Hover me!</div>
+</div>
+</body>
+<script>
+    const card = document.querySelector('.card')
+    card.addEventListener('mousemove', (e) => {
+        requestAnimationFrame(() => {
+            const hw = e.target.offsetWidth / 2
+            const hh = e.target.offsetHeight / 2
+            const factor = 8
+            card.style.transform = `scale(1.12) rotateX(${factor * (hh - e.offsetY) / hh}deg) rotateY(${factor * (e.offsetX - hw) / hw}deg)`
+        })
+    })
+    card.addEventListener('mouseleave', () => {
+        requestAnimationFrame(() => {
+            card.style.transform = 'scale(1) rotateX(0) rotateY(0)'
+        })
+    })
+</script>
+</html>
