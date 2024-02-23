@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+    <meta charset="UTF-8">
+    <title>Dynamic Paint Pen</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+</body>
+<script>
+    class Queue {
+        constructor(shiftRule) {
+            this.container = []
+            this.shouldRemove = shiftRule
+        }
+
+        push(obj) {
+            this.container.push(obj)
+            while (this.shouldRemove(this.container)) this.container.shift()
+        }
+
+        forEach(callback) {
+            this.container.forEach(callback)
+        }
+
+        [Symbol.iterator]() {
+            return this.container[Symbol.iterator]()
+        }
+    }
+
+    start(document.getElementById('canvas'))
+
+    function start(canvas, config) {
+        config = config || {
+            minRadius: 6,
+            maxRadius: 12,
+            radiusCycle: 1009,
+            colorCycle: 2591,
+            fillFrameDistance: 2,
+            fadeTime: 1000
+        }
+
+        const data = {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            x: -1,
+            y: -1
+        }
+        canvas.width = data.width
+        canvas.height = data.height
+        canvas.onmousemove = (e) => {
+            data.x = e.offsetX
+            data.y = e.offsetY
+        }
+        canvas.onmouseleave = () => {
+            data.x = -1
+            data.y = -1
+        }
+
+        const context2d = canvas.getContext('2d')
+
+        const queue = new Queue(arr => {
+            const first = arr[0]
+            return first && ((Date.now() - first.t) > config.fadeTime)
+        })
+
+        function draw() {
+            clearCanvas(context2d, data)
+            let last = null
+            for (const p of queue) {
+                if (last) {
+                    fillFrame(context2d, last, p, config)
+                }
+                last = p
+                drawPoint(context2d, config, p)
+            }
+            queue.push({
+                x: data.x,
+                y: data.y,
+                r: generateRadius(config),
+                c: generateColor(config),
+                t: Date.now()
+            })
+            requestAnimationFrame(draw)
+        }
+
+        draw()
+    }
+
+    function getDistance(p1, p2) {
+        return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2)
+    }
+
+    function fillFrame(context2d, p1, p2, config) {
+        if (p1.x < 0 || p1.y < 0 || p2.x < 0 || p2.y < 0) return
+        const dist = getDistance(p1, p2)
+        if (dist <= config.fillFrameDistance) return
+        const part = dist / config.fillFrameDistance
+        const count = Math.floor(part)
+        const p = Object.assign({}, p1)
+        const dx = (p2.x - p1.x) / part
+        const dy = (p2.y - p1.y) / part
+        const dr = (p2.r - p1.r) / part
+        const dc = (p2.c - p1.c + 360) % 360 / part
+        const dt = (p2.t - p1.t) / part
+        for (let i = 0; i < count; i++) {
+            p.x += dx
+            p.y += dy
+            p.r += dr
+            p.c += dc
+            p.t += dt
+            drawPoint(context2d, config, p)
+        }
+    }
+
+    function generateRadius(config) {
+        const now = Date.now()
+        const half = config.radiusCycle / 2
+        const d = now % config.radiusCycle
+        const offset = (now % half) * (config.maxRadius - config.minRadius) / half
+        return d < half ? config.minRadius + offset : config.maxRadius - offset
+    }
+
+    function generateColor(config) {
+        return (Date.now() % config.colorCycle) * 360 / config.colorCycle
+    }
+
+    function drawPoint(context2d, config, p) {
+        if (p.x < 0 || p.y < 0 || p.r <= 0) return
+        const now = Date.now()
+        const alpha = (config.fadeTime + p.t - now) / config.fadeTime
+        if (alpha <= 0) return
+        context2d.beginPath()
+        context2d.fillStyle = `hsla(${p.c}deg, 100%, 50%, ${alpha})`
+        context2d.arc(p.x, p.y, p.r, 0, 2 * Math.PI)
+        context2d.fill()
+    }
+
+    function clearCanvas(context2d, data) {
+        context2d.fillStyle = '#2b2b2b'
+        context2d.fillRect(0, 0, data.width, data.height)
+    }
+</script>
+</html>
