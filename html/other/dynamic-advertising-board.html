@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+    <meta charset="UTF-8">
+    <title>Dynamic Advertising Board</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .box {
+            --item-width: 40px;
+            --item-height: 200px;
+            --item-count: 10;
+            --rotate-delay: .3s;
+            --item-index: 0;
+            --cot: calc(var(--item-width) * 0.28867513459481288225457439025098);
+            --d-cot: calc(0px - var(--cot));
+            box-sizing: content-box;
+            border: 4px solid #333;
+            display: flex;
+            perspective: 400px;
+        }
+
+        .item {
+            position: relative;
+            width: var(--item-width);
+            height: var(--item-height);
+            transition-delay: calc(var(--item-index) * var(--rotate-delay));
+            transition-duration: 1s;
+            transform-origin: center center var(--d-cot);
+            transform: rotateY(0deg);
+            transform-style: preserve-3d;
+        }
+
+        .box.show-s1 .item {
+            transform: rotateY(0deg);
+        }
+
+        .box.show-s2 .item {
+            transform: rotateY(120deg);
+        }
+
+        .box.show-s3 .item {
+            transform: rotateY(240deg);
+        }
+
+        .box.show-s4 .item {
+            transform: rotateY(360deg);
+        }
+
+        .box.reset .item {
+            transition: none;
+        }
+
+        .surface {
+            position: absolute;
+            width: var(--item-width);
+            height: var(--item-height);
+            background-size: calc(var(--item-count) * var(--item-width)) var(--item-height);
+            background-position-x: calc(-1 * var(--item-index) * var(--item-width));
+        }
+
+        .s1 {
+            background-image: repeating-linear-gradient(45deg, #3f87a6, #ebf8e1 15%, #f69d3c 20%);
+        }
+
+        .s2 {
+            background-image: repeating-conic-gradient(from 45deg at 10% 50%, #e6a564 0deg 10deg, #b2e664 10deg 20deg, #64b9e6 20deg 30deg);
+            transform: translateZ(var(--d-cot)) rotateY(-120deg) translateZ(var(--cot));
+        }
+
+        .s3 {
+            background-image: repeating-radial-gradient(closest-side, #d9e664, #d564e6, #91e5de, #d9e664);
+            transform: translateZ(var(--d-cot)) rotateY(120deg) translateZ(var(--cot));
+        }
+    </style>
+</head>
+<body>
+<h2>动态切换的广告牌</h2>
+<div class="box show-s1"></div>
+</body>
+<script>
+    const splitCount = 10
+    const styleVariable = {
+        '--item-count': splitCount,
+        '--item-width': '40px',
+        '--item-height': '200px',
+        '--rotate-delay': '.2s'
+    }
+
+    const box = document.querySelector('.box')
+    box.setAttribute('style', Object.entries(styleVariable).map(([k, v]) => k + ':' + v).join(';'))
+
+    let lastItem
+    for (let i = 0; i < splitCount; i++) {
+        lastItem = createElem('div', {
+            class: 'item',
+            style: '--item-index:' + i
+        }, '<div class="surface s1"></div><div class="surface s2"></div><div class="surface s3"></div>')
+        box.append(lastItem)
+    }
+    lastItem.addEventListener("transitionend", e => {
+        if (e.propertyName === 'transform') {
+            if (box.classList.contains('show-s4')) {
+                box.classList.add('reset')
+                box.classList.remove('show-s4')
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        box.classList.add('show-s1')
+                        box.classList.remove('reset')
+                    })
+                })
+            }
+            switchNextSurface()
+        }
+    })
+    switchNextSurface()
+
+    function switchNextSurface(delay = 2000) {
+        setTimeout(() => {
+            const showClass = Array.from(box.classList.values()).find(c => c.startsWith('show-s'))
+            if (showClass) {
+                const n = Number(showClass.substring(6, showClass.length))
+                if (n > 0) {
+                    box.classList.remove(showClass)
+                    box.classList.add(`show-s${(n % 4) + 1}`)
+                }
+            }
+        }, delay)
+    }
+
+    function createElem(tag, attrs, inner) {
+        const el = document.createElement(tag)
+        if (attrs) {
+            Object.entries(attrs).forEach(([k, v]) => {
+                el.setAttribute(k, v)
+            })
+        }
+        if (inner) el.innerHTML = inner
+        return el
+    }
+</script>
+</html>
