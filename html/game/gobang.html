@@ -1,356 +1,357 @@
 <!DOCTYPE html>
 <html lang="zh-cmn-Hans">
 <head>
-    <meta charset="UTF-8">
-    <title>Gobang</title>
+  <meta charset="UTF-8">
+  <title>Gobang</title>
 </head>
 <body>
 <h1>Gobang</h1>
-<canvas id="myCanvas" width="500" height="500">
-    Your browser does not support the canvas element.
+<canvas id="canvas-main" width="500" height="500">
+  Your browser does not support the canvas element.
 </canvas>
 <p>
-    <input type="button" id="btn_reset" value="新局">
-    <input type="button" id="btn_retract" value="悔棋">
+  <input type="button" id="btn-reset" value="新局">
+  <input type="button" id="btn-retract" value="悔棋">
 </p>
-<script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js" type="text/javascript"></script>
 <script src="../../js/JsPoint.js" type="text/javascript"></script>
 <script>
-    /**
-     * 棋盘基础属性: 间距, 行数, 列数, 总格数
-     * @type {number}
-     */
-    var board_spacing = 30;
-    var board_row = 15;
-    var board_col = 15;
-    var board_total = board_row * board_col;
+  /**
+   * 棋盘基础属性: 间距, 行数, 列数, 总格数
+   * @type {number}
+   */
+  const board_spacing = 30
+  const board_row = 15
+  const board_col = 15
+  const board_total = board_row * board_col
 
-    /**
-     * 颜色值
-     * @type {string}
-     */
-    var board_bgc = 'lightgray';
-    var board_line_color = 'black';
-    var piece_white_color = 'white';
-    var piece_black_color = 'black';
+  /**
+   * 颜色值
+   * @type {string}
+   */
+  const board_bgc = "lightgray"
+  const board_line_color = "black"
+  const piece_white_color = "white"
+  const piece_black_color = "black"
 
-    /**
-     * 棋盘位置属性: 左上右下的具体位置
-     * @type {number}
-     */
-    var board_left = board_spacing;
-    var board_top = board_spacing;
-    var board_right = board_left + (board_col - 1) * board_spacing;
-    var board_bottom = board_top + (board_row - 1) * board_spacing;
+  /**
+   * 棋盘位置属性: 左上右下的具体位置
+   * @type {number}
+   */
+  const board_left = board_spacing
+  const board_top = board_spacing
+  const board_right = board_left + (board_col - 1) * board_spacing
+  const board_bottom = board_top + (board_row - 1) * board_spacing
 
-    /**
-     * 棋子半径
-     * 半径为间隔一半，再乘以0.85
-     * @type {number}
-     */
-    var piece_radius = board_spacing * 85 / 200;
+  /**
+   * 棋子半径
+   * 半径为间隔一半，再乘以0.85
+   * @type {number}
+   */
+  const piece_radius = board_spacing * 85 / 200
 
-    /**
-     * 棋盘状态
-     * 其中 <code>state_draw</code> 表示平局
-     */
-    var board_states = [];
-    var state_black = piece_black_color;
-    var state_white = piece_white_color;
-    var state_draw = 'draw';
-    for (let i = 0; i < board_row; i++) {
-        board_states[i] = [];
+  /**
+   * 棋盘状态
+   * 其中 <code>state_draw</code> 表示平局
+   */
+  const board_states = []
+  const state_black = piece_black_color
+  const state_white = piece_white_color
+  const state_draw = "draw"
+  for (let i = 0; i < board_row; i++) {
+    board_states[i] = []
+  }
+
+  /**
+   * 对局信息: 当前玩家, 历史记录, 赢家
+   */
+  let cur_player = state_black
+  let history_stack = []
+  let winner = undefined
+  const winner_start_point = new JsPoint()
+  const winner_end_point = new JsPoint()
+
+  /**
+   * 按钮
+   */
+  const btn_reset = document.getElementById("btn-reset")
+  const btn_retract = document.getElementById("btn-retract")
+
+  const canvas_main = document.getElementById("canvas-main")
+
+  window.onload = () => {
+    setButtonDisabled(true, true)
+    const cxt = canvas_main.getContext("2d")
+    drawBoard(cxt)
+
+    canvas_main.addEventListener("click", (evt) => {
+      // 已诞生赢家的情况下不能再落子
+      if (winner) return
+      const sel_row = axis2Row(evt.offsetX - board_left)
+      const sel_col = axis2Row(evt.offsetY - board_top)
+      // 出界判断
+      if (isOutside(sel_row, sel_col)) return
+      // 有子判断
+      if (board_states[sel_row][sel_col]) return
+      // 在该位置落子
+      board_states[sel_row][sel_col] = cur_player
+      // 绘制棋子
+      drawPiece(cxt, cur_player, board_left + row2Axis(sel_row), board_top + row2Axis(sel_col))
+      // 存入历史记录
+      history_stack.push(new JsPoint(sel_row, sel_col))
+      // 赢家判定
+      if (hasWinner(sel_row, sel_col)) {
+        winner = cur_player
+        drawWinnerPath(cxt)
+        msg(winner + " win !")
+      }
+      // 和棋判定
+      else if (history_stack.length === board_total) {
+        winner = state_draw
+        msg(winner + " !")
+      }
+      setButtonDisabled(false, Boolean(winner))
+      // 切换落子方
+      switchCurrentPlayer()
+    })
+
+    btn_reset.addEventListener("click", () => {
+      if (!history_stack.length) {
+        return
+      }
+      history_stack = []
+      for (let i = 0; i < board_states.length; i++) {
+        board_states[i] = []
+      }
+      winner = undefined
+      cur_player = state_black
+      drawBoard(cxt)
+      setButtonDisabled(true, true)
+    })
+
+    btn_retract.addEventListener("click", () => {
+      if (winner || !history_stack.length) {
+        return
+      }
+      const p = history_stack.pop()
+      board_states[p.x][p.y] = undefined
+      switchCurrentPlayer()
+      clearPiece(cxt, board_left + row2Axis(p.x), board_top + row2Axis(p.y))
+      if (!history_stack.length) {
+        setButtonDisabled(true, true)
+      }
+    })
+  }
+
+  /**
+   * 设置按钮是否禁用
+   * @param boo1 禁用新局
+   * @param boo2 禁用悔棋
+   */
+  function setButtonDisabled(boo1, boo2) {
+    btn_reset.disabled = boo1
+    btn_retract.disabled = boo2
+  }
+
+  /**
+   * 绘制棋盘
+   * @param cxt
+   */
+  function drawBoard(cxt) {
+    cxt.beginPath()
+    cxt.fillStyle = board_bgc
+    cxt.fillRect(0, 0, board_left + board_right, board_top + board_bottom)
+    cxt.beginPath()
+    cxt.strokeStyle = board_line_color
+    cxt.lineWidth = 1
+    cxt.lineCap = "butt"
+    // 绘制横线
+    for (let i = 0, j; i < board_row; i++) {
+      j = board_top + i * board_spacing
+      drawLine(cxt, board_left, j, board_right, j)
     }
-
-    /**
-     * 对局信息: 当前玩家, 历史记录, 赢家
-     */
-    var cur_player = state_black;
-    var history_stack = [];
-    var winner = undefined;
-    var winner_start_point = new JsPoint();
-    var winner_end_point = new JsPoint();
-
-    /**
-     * 按钮
-     */
-    var $btn_reset = $('#btn_reset');
-    var $btn_retract = $('#btn_retract');
-
-    $(function () {
-        setButtonDisabled(true, true);
-        var cxt = $("#myCanvas")[0].getContext('2d');
-        drawBoard(cxt);
-
-        $('#myCanvas').click(function (event) {
-            // 已诞生赢家的情况下不能再落子
-            if (winner) return;
-            let sel_row = axis2Row(event.offsetX - board_left);
-            let sel_col = axis2Row(event.offsetY - board_top);
-            // 出界判断
-            if (isOutside(sel_row, sel_col)) return;
-            // 有子判断
-            if (board_states[sel_row][sel_col]) return;
-            // 在该位置落子
-            board_states[sel_row][sel_col] = cur_player;
-            // 绘制棋子
-            drawPiece(cxt, cur_player, board_left + row2Axis(sel_row), board_top + row2Axis(sel_col));
-            // 存入历史记录
-            history_stack.push(new JsPoint(sel_row, sel_col));
-            // 赢家判定
-            if (hasWinner(sel_row, sel_col)) {
-                winner = cur_player;
-                drawWinnerPath(cxt);
-                msg(winner + ' win !');
-            }
-            // 和棋判定
-            else if (history_stack.length == board_total) {
-                winner = state_draw;
-                msg(winner + ' !');
-            }
-            setButtonDisabled(false, Boolean(winner));
-            // 切换落子方
-            switchCurrentPlayer();
-        });
-
-        $btn_reset.click(function () {
-            if (!history_stack.length) {
-                return;
-            }
-            history_stack = [];
-            for (let i = 0; i < board_states.length; i++) {
-                board_states[i] = [];
-            }
-            winner = undefined;
-            cur_player = state_black;
-            drawBoard(cxt);
-            setButtonDisabled(true, true);
-        });
-
-        $btn_retract.click(function () {
-            if (winner || !history_stack.length) {
-                return;
-            }
-            let p = history_stack.pop();
-            board_states[p.x][p.y] = undefined;
-            switchCurrentPlayer();
-            clearPiece(cxt, board_left + row2Axis(p.x), board_top + row2Axis(p.y));
-            if (!history_stack.length) {
-                setButtonDisabled(true, true);
-            }
-        });
-    });
-
-    /**
-     * 设置按钮是否禁用
-     * @param boo1 禁用新局
-     * @param boo2 禁用悔棋
-     */
-    function setButtonDisabled(boo1, boo2) {
-        $btn_reset.prop('disabled', boo1);
-        $btn_retract.prop('disabled', boo2);
+    // 绘制竖线
+    for (let i = 0, j; i < board_col; i++) {
+      j = board_left + i * board_spacing
+      drawLine(cxt, j, board_top, j, board_bottom)
     }
+    cxt.stroke()
+  }
 
-    /**
-     * 绘制棋盘
-     * @param cxt
-     */
-    function drawBoard(cxt) {
-        cxt.beginPath();
-        cxt.fillStyle = board_bgc;
-        cxt.fillRect(0, 0, board_left + board_right, board_top + board_bottom);
-        cxt.beginPath();
-        cxt.strokeStyle = board_line_color;
-        cxt.lineWidth = 1;
-        cxt.lineCap = 'butt';
-        // 绘制横线
-        for (let i = 0, j; i < board_row; i++) {
-            j = board_top + i * board_spacing;
-            drawLine(cxt, board_left, j, board_right, j);
+  /**
+   * 绘制棋子
+   * @param cxt
+   * @param wColor 棋子颜色
+   * @param x0 棋子横坐标
+   * @param y0 棋子纵坐标
+   */
+  function drawPiece(cxt, wColor, x0, y0) {
+    cxt.beginPath()
+    cxt.fillStyle = wColor
+    drawCircle(cxt, x0, y0, piece_radius)
+    cxt.fill()
+  }
+
+  /**
+   * 清除棋子
+   * @param cxt
+   * @param x0 棋子横坐标
+   * @param y0 棋子纵坐标
+   */
+  function clearPiece(cxt, x0, y0) {
+    const half = board_spacing / 2
+    let x1 = x0 - half
+    let x2 = x0 + half
+    let y1 = y0 - half
+    let y2 = y0 + half
+    cxt.beginPath()
+    cxt.fillStyle = board_bgc
+    cxt.fillRect(x1, y1, board_spacing, board_spacing)
+    x1 = x1 < board_left ? x0 : x1
+    x2 = x2 > board_right ? x0 : x2
+    y1 = y1 < board_top ? y0 : y1
+    y2 = y2 > board_bottom ? y0 : y2
+    cxt.beginPath()
+    cxt.strokeStyle = board_line_color
+    cxt.lineWidth = 1
+    cxt.lineCap = "butt"
+    // 绘制横线
+    drawLine(cxt, x1, y0, x2, y0)
+    // 绘制竖线
+    drawLine(cxt, x0, y1, x0, y2)
+    cxt.stroke()
+  }
+
+  /**
+   * 绘制赢家路径
+   */
+  function drawWinnerPath(cxt) {
+    cxt.beginPath()
+    cxt.strokeStyle = "red"
+    cxt.lineWidth = 4
+    cxt.lineCap = "round"
+    drawLine(cxt,
+      board_left + row2Axis(winner_start_point.x),
+      board_top + row2Axis(winner_start_point.y),
+      board_left + row2Axis(winner_end_point.x),
+      board_top + row2Axis(winner_end_point.y))
+    cxt.stroke()
+  }
+
+  /**
+   * 绘制线段
+   * @param cxt
+   * @param x1 起点横坐标
+   * @param y1 起点纵坐标
+   * @param x2 终点横坐标
+   * @param y2 终点纵坐标
+   */
+  function drawLine(cxt, x1, y1, x2, y2) {
+    cxt.moveTo(x1 - 0.5, y1 - 0.5)
+    cxt.lineTo(x2 - 0.5, y2 - 0.5)
+  }
+
+  /**
+   * 绘制圆形
+   * @param cxt
+   * @param x0 中心点横坐标
+   * @param y0 中心点纵坐标
+   * @param r0 圆半径
+   */
+  function drawCircle(cxt, x0, y0, r0) {
+    cxt.arc(x0, y0, r0, 0, 2 * Math.PI)
+    cxt.closePath()
+  }
+
+  /**
+   * 坐标差转为行列
+   * @param offset0 坐标差
+   */
+  function axis2Row(offset0) {
+    let s = parseInt(offset0 / board_spacing)
+    const y = offset0 % board_spacing
+    if (y > board_spacing / 2) {
+      s++
+    }
+    return s
+  }
+
+  /**
+   * 行列转为坐标差
+   * @param r0 行列
+   */
+  function row2Axis(r0) {
+    return r0 * board_spacing
+  }
+
+  /**
+   * @return boolean 是否出界
+   */
+  function isOutside(x0, y0) {
+    return (x0 < 0 || x0 >= board_row || y0 < 0 || y0 >= board_col)
+  }
+
+  /**
+   * 切换落子方
+   */
+  function switchCurrentPlayer() {
+    switch (cur_player) {
+      case state_black:
+        cur_player = state_white
+        break
+
+      case state_white:
+        cur_player = state_black
+        break
+      default:
+    }
+  }
+
+  /**
+   * 赢家判定
+   * @return boolean 是否诞生赢家
+   */
+  function hasWinner(x0, y0) {
+    // 除了落点以外还需要4个同色棋子
+    const count = 4
+    // 某个方向上两端分别有几个同色棋子
+    const dc = [0, 0]
+    // 4个方向，每个方向可以向两端延申
+    const directions = [["l", "r"], ["u", "d"], ["lu", "rd"], ["ld", "ru"]]
+    for (const direction of directions) {
+      for (let i = 0; i < dc.length; i++) {
+        for (dc[i] = 0; ;) {
+          const [x1, y1] = move(x0, y0, direction[i], dc[i] + 1)
+          if (isOutside(x1, y1)) break
+          if (board_states[x1][y1] !== cur_player) break
+          dc[i]++
+          if (dc[0] + dc[1] >= count) {
+            winner_start_point.SetPoint(...move(x0, y0, direction[0], dc[0]))
+            winner_end_point.SetPoint(...move(x0, y0, direction[1], dc[1]))
+            return true
+          }
         }
-        // 绘制竖线
-        for (let i = 0, j; i < board_col; i++) {
-            j = board_left + i * board_spacing;
-            drawLine(cxt, j, board_top, j, board_bottom);
-        }
-        cxt.stroke();
+      }
     }
+    return false
+  }
 
-    /**
-     * 绘制棋子
-     * @param cxt
-     * @param wColor 棋子颜色
-     * @param x0 棋子横坐标
-     * @param y0 棋子纵坐标
-     */
-    function drawPiece(cxt, wColor, x0, y0) {
-        cxt.beginPath();
-        cxt.fillStyle = wColor;
-        drawCircle(cxt, x0, y0, piece_radius);
-        cxt.fill();
-    }
+  function move(x0, y0, direction, step) {
+    if (direction.includes("l")) x0 -= step
+    else if (direction.includes("r")) x0 += step
+    if (direction.includes("u")) y0 -= step
+    else if (direction.includes("d")) y0 += step
+    return [x0, y0]
+  }
 
-    /**
-     * 清除棋子
-     * @param cxt
-     * @param x0 棋子横坐标
-     * @param y0 棋子纵坐标
-     */
-    function clearPiece(cxt, x0, y0) {
-        let half = board_spacing / 2;
-        let x1 = x0 - half;
-        let x2 = x0 + half;
-        let y1 = y0 - half;
-        let y2 = y0 + half;
-        cxt.beginPath();
-        cxt.fillStyle = board_bgc;
-        cxt.fillRect(x1, y1, board_spacing, board_spacing);
-        x1 = x1 < board_left ? x0 : x1;
-        x2 = x2 > board_right ? x0 : x2;
-        y1 = y1 < board_top ? y0 : y1;
-        y2 = y2 > board_bottom ? y0 : y2;
-        cxt.beginPath();
-        cxt.strokeStyle = board_line_color;
-        cxt.lineWidth = 1;
-        cxt.lineCap = 'butt';
-        // 绘制横线
-        drawLine(cxt, x1, y0, x2, y0);
-        // 绘制竖线
-        drawLine(cxt, x0, y1, x0, y2);
-        cxt.stroke();
-    }
-
-    /**
-     * 绘制赢家路径
-     */
-    function drawWinnerPath(cxt) {
-        cxt.beginPath();
-        cxt.strokeStyle = 'red';
-        cxt.lineWidth = 4;
-        cxt.lineCap = "round";
-        drawLine(cxt,
-            board_left + row2Axis(winner_start_point.x),
-            board_top + row2Axis(winner_start_point.y),
-            board_left + row2Axis(winner_end_point.x),
-            board_top + row2Axis(winner_end_point.y));
-        cxt.stroke();
-    }
-
-    /**
-     * 绘制线段
-     * @param cxt
-     * @param x1 起点横坐标
-     * @param y1 起点纵坐标
-     * @param x2 终点横坐标
-     * @param y2 终点纵坐标
-     */
-    function drawLine(cxt, x1, y1, x2, y2) {
-        cxt.moveTo(x1 - 0.5, y1 - 0.5);
-        cxt.lineTo(x2 - 0.5, y2 - 0.5);
-    }
-
-    /**
-     * 绘制圆形
-     * @param cxt
-     * @param x0 中心点横坐标
-     * @param y0 中心点纵坐标
-     * @param r0 圆半径
-     */
-    function drawCircle(cxt, x0, y0, r0) {
-        cxt.arc(x0, y0, r0, 0, 2 * Math.PI);
-        cxt.closePath();
-    }
-
-    /**
-     * 坐标差转为行列
-     * @param offset0 坐标差
-     */
-    function axis2Row(offset0) {
-        let s = parseInt(offset0 / board_spacing);
-        let y = offset0 % board_spacing;
-        if (y > board_spacing / 2) {
-            s++;
-        }
-        return s;
-    }
-
-    /**
-     * 行列转为坐标差
-     * @param r0 行列
-     */
-    function row2Axis(r0) {
-        return r0 * board_spacing;
-    }
-
-    /**
-     * @return boolean 是否出界
-     */
-    function isOutside(x0, y0) {
-        return (x0 < 0 || x0 >= board_row || y0 < 0 || y0 >= board_col);
-    }
-
-    /**
-     * 切换落子方
-     */
-    function switchCurrentPlayer() {
-        switch (cur_player) {
-            case state_black:
-                cur_player = state_white;
-                break;
-
-            case state_white:
-                cur_player = state_black;
-                break;
-            default:
-        }
-    }
-
-    /**
-     * 赢家判定
-     * @return boolean 是否诞生赢家
-     */
-    function hasWinner(x0, y0) {
-        // 除了落点以外还需要4个同色棋子
-        let count = 4
-        // 某个方向上两端分别有几个同色棋子
-        let dc = [0, 0]
-        // 4个方向，每个方向可以向两端延申
-        let directions = [['l', 'r'], ['u', 'd'], ['lu', 'rd'], ['ld', 'ru']]
-        for (let direction of directions) {
-            for (let i = 0; i < dc.length; i++) {
-                for (dc[i] = 0; ;) {
-                    let [x1, y1] = move(x0, y0, direction[i], dc[i] + 1)
-                    if (isOutside(x1, y1)) break
-                    if (board_states[x1][y1] !== cur_player) break
-                    dc[i]++
-                    if (dc[0] + dc[1] >= count) {
-                        winner_start_point.SetPoint(...move(x0, y0, direction[0], dc[0]))
-                        winner_end_point.SetPoint(...move(x0, y0, direction[1], dc[1]))
-                        return true
-                    }
-                }
-            }
-        }
-        return false
-    }
-
-    function move(x0, y0, direction, step) {
-        if (direction.includes('l')) x0 -= step
-        else if (direction.includes('r')) x0 += step
-        if (direction.includes('u')) y0 -= step
-        else if (direction.includes('d')) y0 += step
-        return [x0, y0]
-    }
-
-    /**
-     * 异步显示消息框
-     * @param str 消息内容
-     */
-    function msg(str) {
-        setTimeout(function (arg) {
-            alert(arg)
-        }, 0, str)
-    }
+  /**
+   * 异步显示消息框
+   * @param str 消息内容
+   */
+  function msg(str) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => alert(str))
+    })
+  }
 </script>
 </body>
 </html>
