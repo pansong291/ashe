@@ -35,7 +35,7 @@
             transform-origin: center center var(--item-center);
             transform: rotateY(0deg);
             transform-style: preserve-3d;
-            z-index: calc(var(--item-count) - sqrt(pow(var(--item-index) - var(--item-count) / 2, 2)));
+            z-index: calc(var(--item-count) - hypot(var(--item-index) - var(--item-count) / 2));
         }
 
         .box.show-s1 .item {
