@@ -195,18 +195,25 @@
       const sel_x = axis2Row(evt.offsetY - board_border)
       const sel_y = axis2Row(evt.offsetX - board_border)
       if (isOutside(sel_x, sel_y)) return
-      if (sel_x !== down_block.x || sel_y !== down_block.y) return
+      if (!down_block.Equal(sel_x, sel_y)) return
       if (evt.button === 0) leftClick(ctx, sel_x, sel_y)
       else if (evt.button === 2) rightClick(ctx, sel_x, sel_y)
+      down_block.SetPoint(-1, -1)
     })
     canvas_main.addEventListener("pointermove", (evt) => {
       const sel_x = axis2Row(evt.offsetY - board_border)
       const sel_y = axis2Row(evt.offsetX - board_border)
+      if (last_block.Equal(sel_x, sel_y)) return
+      if (last_block.Equal(down_block)) down_block.SetPoint(-1, -1)
       setBlockHighlight(ctx, last_block.x, last_block.y, false)
       setBlockHighlight(ctx, sel_x, sel_y, true)
       last_block.SetPoint(sel_x, sel_y)
     })
-    canvas_main.addEventListener("pointerleave", () => setBlockHighlight(ctx, last_block.x, last_block.y, false))
+    canvas_main.addEventListener("pointerleave", () => {
+      setBlockHighlight(ctx, last_block.x, last_block.y, false)
+      last_block.SetPoint(-1, -1)
+      down_block.SetPoint(-1, -1)
+    })
     canvas_main.addEventListener("contextmenu", (evt) => evt.preventDefault())
     document.getElementById("btn-reset").addEventListener("click", () => reset(canvas_main, ctx))
 
