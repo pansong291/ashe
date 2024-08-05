@@ -83,9 +83,9 @@
   Your browser does not support the canvas element.
 </canvas>
 <p>
-  <label>行：<input type="number" id="input-board-row" value="15"></label>
-  <label>列：<input type="number" id="input-board-col" value="20"></label>
-  <label>雷数：<input type="number" id="input-mine-count" value="40"></label>
+  <label>行：<input type="number" id="input-board-row" value="15" onwheel></label>
+  <label>列：<input type="number" id="input-board-col" value="20" onwheel></label>
+  <label>雷数：<input type="number" id="input-mine-count" value="40" onwheel></label>
   <button type="button" id="btn-reset">新局</button>
 </p>
 <script src="../../js/JsPoint.js" type="text/javascript"></script>
@@ -227,20 +227,17 @@
    * @param y0 列
    */
   function leftClick(ctx, x0, y0) {
-    let count0
     const img_id = board_states[x0][y0]
     switch (img_id) {
       case id_normal_light:
       case id_unknown_light:
-        count0 = expandByDFS(ctx, x0, y0)
-        isGameOver(ctx, count0)
+        checkGameOver(ctx, () => expandByDFS(ctx, x0, y0))
         break
       default:
         if (img_id >= id_n[1] && img_id <= id_n[8]) {
           const flag_count = countNineBlockSurround(x0, y0, (i, j) => Number(board_states[i][j] === id_flag))
           if (img_id === id_n[flag_count]) {
-            count0 = expandSurround(ctx, x0, y0)
-            isGameOver(ctx, count0)
+            checkGameOver(ctx, () => expandSurround(ctx, x0, y0))
           } else {
             setBlockState(ctx, x0, y0, id_sweep_error)
             setTimeout((...args) => setBlockState.apply(null, args), 300, ctx, x0, y0, img_id)
@@ -313,24 +310,23 @@
   }
 
   /**
-   * 判断游戏是否结束
+   * 检查游戏是否结束
    * @param ctx
-   * @param count0 挖开的块的个数
+   * @param {() => number} count_supplier 提供挖开地块的个数
    * @return {boolean}
    */
-  function isGameOver(ctx, count0) {
-    if (count0 < 0) {
+  function checkGameOver(ctx, count_supplier) {
+    try {
+      sweep_count += count_supplier()
+      if (sweep_count + mine_count === board_total) {
+        game_over = true
+        msg("游戏胜利！")
+      }
+    } catch (e) {
       game_over = true
       showResult(ctx)
       msg("你踩到地雷了！")
-      return game_over
     }
-    sweep_count += count0
-    if (sweep_count + mine_count === board_total) {
-      game_over = true
-      msg("游戏胜利！")
-    }
-    return game_over
   }
 
   /**
@@ -455,30 +451,18 @@
   }
 
   /**
-   * 挖开周围的方块, 返回总共挖开的个数, 若为负数说明踩到地雷了
+   * 挖开周围的方块, 返回总共挖开的个数, 踩到地雷时抛出异常
    * @param ctx
    * @param x0 行
    * @param y0 列
    * @return {number}
    */
   function expandSurround(ctx, x0, y0) {
-    try {
-      return countNineBlockSurround(x0, y0, (i, j) => {
-        const num = expandByDFS(ctx, i, j)
-        if (num < 0) {
-          const e = new Error("game failed")
-          e.data = num
-          throw e
-        }
-        return num
-      })
-    } catch (e) {
-      return e.data ?? -1
-    }
+    return countNineBlockSurround(x0, y0, (i, j) => expandByDFS(ctx, i, j))
   }
 
   /**
-   * 深度搜索并展开空白块, 返回总共展开的个数, 若为负数说明踩到地雷了
+   * 深度搜索并展开空白块, 返回总共展开的个数, 踩到地雷时抛出异常
    * @param ctx
    * @param x0 行
    * @param y0 列
@@ -490,39 +474,32 @@
     if (img_id !== id_normal && img_id !== id_unknown &&
       img_id !== id_normal_light && img_id !== id_unknown_light)
       return expand_count
-    let num = sweepOne(ctx, x0, y0)
-    if (num < 0) return num
     expand_count++
     // 当前块的数字大于0，不能展开周围，因为有地雷
-    if (num > 0) return expand_count
+    if (sweepOne(ctx, x0, y0) > 0) return expand_count
 
-    num = expandSurround(ctx, x0, y0)
-    if (num < 0) return num
-    expand_count += num
+    expand_count += expandSurround(ctx, x0, y0)
     return expand_count
   }
 
   /**
-   * 挖开一个块, 返回该块显示的数字, 若为负数说明踩到地雷了
+   * 挖开一个块, 返回该块显示的数字, 踩到地雷时抛出异常
    * @param ctx
    * @param x0 行
    * @param y0 列
    * @return {number}
    */
   function sweepOne(ctx, x0, y0) {
-    let img_id
-    let num
     if (mine_map[x0][y0]) {
       // game over
-      num = -1
-      img_id = id_mine_burst
+      setBlockState(ctx, x0, y0, id_mine_burst)
+      throw new Error("game failed")
     } else {
       // calculate mine's count surround current block
-      num = countNineBlockSurround(x0, y0, (i, j) => mine_map[i][j])
-      img_id = id_n[num]
+      const num = countNineBlockSurround(x0, y0, (i, j) => mine_map[i][j])
+      setBlockState(ctx, x0, y0, id_n[num])
+      return num
     }
-    setBlockState(ctx, x0, y0, img_id)
-    return num
   }
 
   /**
