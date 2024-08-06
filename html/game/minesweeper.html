@@ -47,11 +47,17 @@
 <body>
 <h1>Minesweeper</h1>
 <ol>
-  <li>单击左键挖开方块，单击右键进行标记。</li>
+  <li>
+    单击
+    <span style="color: green">左键</span>
+    挖开方块，单击
+    <span style="color: purple">右键</span>
+    进行标记。
+  </li>
   <li>
     <span class="top-26">
       <img src="../../img/game/minesweeper/flag.png" alt="flag" class="no-hide">
-      <span>为有雷标记，</span>
+      <span>为 <span style="color: crimson">有雷标记</span>，</span>
       <img src="../../img/game/minesweeper/flag_light.png" alt="flag_light">
       <img src="../../img/game/minesweeper/flag_error.png" alt="flag_error">
       <img src="../../img/game/minesweeper/mine.png" alt="mine">
@@ -76,7 +82,15 @@
       <img src="../../img/game/minesweeper/unknown_light.png" alt="unknown_light">
     </span>
   </li>
-  <li>左键点击数字可展开周围方块，前提是周围标记数等于该数字。</li>
+  <li>
+    <span style="color: green">左键</span>
+    点击
+    <span style="color: chocolate">数字</span>
+    可展开周围方块，前提是
+    <span style="color: crimson">周围标记数</span>
+    等于该
+    <span style="color: chocolate">数字</span>。
+  </li>
 </ol>
 <p>剩余地雷数：<span id="text-left-count">0</span></p>
 <canvas id="canvas-main" width="100" height="100" style="border: 1px solid black">
