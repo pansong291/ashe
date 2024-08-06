@@ -129,14 +129,15 @@
   const img_height = 24
 
   /**
-   * 地雷个数, 棋盘行数, 列数, 总格数, 边框厚度
+   * 地雷个数, 棋盘行数, 列数, 总格数, 内边距, 间距
    * @type {number}
    */
   let mine_count
   let board_row
   let board_col
   let board_total
-  const board_border = 2
+  const board_padding = 1
+  const board_spacing = 2 * board_padding
 
   /**
    * 棋盘位置属性: 左上右下
@@ -200,14 +201,14 @@
     const ctx = canvas_main.getContext("2d")
 
     canvas_main.addEventListener("pointerdown", (evt) => {
-      const sel_x = axis2Row(evt.offsetY - board_border)
-      const sel_y = axis2Row(evt.offsetX - board_border)
+      const sel_x = axis2Row(evt.offsetY - board_padding)
+      const sel_y = axis2Row(evt.offsetX - board_padding)
       down_block.SetPoint(sel_x, sel_y)
     })
     canvas_main.addEventListener("pointerup", (evt) => {
       if (game_over) return
-      const sel_x = axis2Row(evt.offsetY - board_border)
-      const sel_y = axis2Row(evt.offsetX - board_border)
+      const sel_x = axis2Row(evt.offsetY - board_padding)
+      const sel_y = axis2Row(evt.offsetX - board_padding)
       if (isOutside(sel_x, sel_y)) return
       if (!down_block.Equal(sel_x, sel_y)) return
       if (evt.button === 0) leftClick(ctx, sel_x, sel_y)
@@ -215,8 +216,8 @@
       down_block.SetPoint(-1, -1)
     })
     canvas_main.addEventListener("pointermove", (evt) => {
-      const sel_x = axis2Row(evt.offsetY - board_border)
-      const sel_y = axis2Row(evt.offsetX - board_border)
+      const sel_x = axis2Row(evt.offsetY - board_padding)
+      const sel_y = axis2Row(evt.offsetX - board_padding)
       if (last_block.Equal(sel_x, sel_y)) return
       if (last_block.Equal(down_block)) down_block.SetPoint(-1, -1)
       setBlockHighlight(ctx, last_block.x, last_block.y, false)
@@ -314,8 +315,8 @@
     }
     board_left = 0
     board_top = 0
-    board_right = board_left + board_border + (img_width + board_border) * board_col
-    board_bottom = board_top + board_border + (img_height + board_border) * board_row
+    board_right = board_left + board_spacing + (img_width + board_spacing) * board_col
+    board_bottom = board_top + board_spacing + (img_height + board_spacing) * board_row
 
     canvas_main.setAttribute("width", board_right)
     canvas_main.setAttribute("height", board_bottom)
@@ -383,7 +384,7 @@
    */
   function setBlockState(ctx, x0, y0, img_id) {
     board_states[x0][y0] = img_id
-    ctx.drawImage(imgs[img_id], board_border + row2Axis(y0), board_border + row2Axis(x0))
+    ctx.drawImage(imgs[img_id], board_spacing + row2Axis(y0), board_spacing + row2Axis(x0))
   }
 
   /**
@@ -409,9 +410,7 @@
    */
   function axis2Row(offset0) {
     // 暂时只以图片宽度为基准，所以图片宽高必须一致
-    const w = img_width + board_border
-    if ((offset0 % w) >= img_width) return -1
-    return Math.floor(offset0 / w)
+    return Math.floor(offset0 / (img_width + board_spacing))
   }
 
   /**
@@ -421,7 +420,7 @@
    */
   function row2Axis(r0) {
     // 暂时只以图片宽度为基准，所以图片宽高必须一致
-    return r0 * (img_width + board_border)
+    return r0 * (img_width + board_spacing)
   }
 
   /**
