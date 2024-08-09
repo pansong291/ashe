@@ -553,35 +553,83 @@
    * 自动扫雷
    */
   function autoSweep(ctx) {
+    // 雷数 -> Array<雷区>, 雷区 = Array<JsPoint>
+    // 用于统计相同雷数下的嵌套雷区
+    const area = {}
     for (let i = 0; i < board_row; i++) {
       for (let j = 0; j < board_col; j++) {
         const state = board_states[i][j]
-        if (state >= id_n[1] && state <= id_n[8]) {
-          const [flag_count, normal_count] = countNineBlockSurround(i, j, (x, y) => {
-            return Number([id_flag, id_flag_light].includes(board_states[x][y]))
-          }, (x, y) => {
-            return Number(canSweep(x, y))
-          })
-          if (normal_count <= 0) continue
-          if (state === id_n[flag_count + normal_count]) {
-            countNineBlockSurround(i, j, (x, y) => {
-              if (canSweep(x, y)) {
-                setBlockState(ctx, x, y, id_flag)
-                text_left_count.innerText = Number(text_left_count.innerText) - 1
-              }
-              return 0
-            })
-            requestAnimationFrame(() => autoSweep(ctx))
-            return
-          } else if (state === id_n[flag_count]) {
-            checkGameOver(ctx, () => expandSurround(ctx, i, j))
-            if (!game_over) requestAnimationFrame(() => autoSweep(ctx))
-            return
+        // 跳过非数字地块
+        if (state < id_n[1] || state > id_n[8]) continue
+        // 统计周围标记数与普通地块
+        const normal_blocks = []
+        const [flag_count, normal_count] = countNineBlockSurround(i, j, (x, y) => {
+          return Number([id_flag, id_flag_light].includes(board_states[x][y]))
+        }, (x, y) => {
+          const r = Number(canSweep(x, y))
+          if (r) normal_blocks.push(new JsPoint(x, y))
+          return r
+        })
+        // 周围无普通地块，跳过
+        if (normal_count <= 0) continue
+        if (state === id_n[flag_count + normal_count]) {
+          // 存在可标记的普通地块
+          for (const p of normal_blocks) {
+            setBlockState(ctx, p.x, p.y, id_flag)
+            text_left_count.innerText = Number(text_left_count.innerText) - 1
+          }
+          requestAnimationFrame(() => autoSweep(ctx))
+          return
+        } else if (state === id_n[flag_count]) {
+          // 存在可挖掘的普通地块
+          checkGameOver(ctx, () => expandSurround(ctx, i, j))
+          if (!game_over) requestAnimationFrame(() => autoSweep(ctx))
+          return
+        }
+        if (normal_count < 2) continue
+        const m_count = state - id_n[0] - flag_count
+        if (!area[m_count]) area[m_count] = []
+        area[m_count].push(normal_blocks)
+      }
+    }
+    if (sweepByNestedArea(ctx, area)) {
+      if (!game_over) requestAnimationFrame(() => autoSweep(ctx))
+      return
+    }
+    msg("当前状态无法自动扫雷，请改变状态后再试！")
+  }
+
+  /**
+   * 根据嵌套雷区挖掘地块。
+   * 雷数 -> Array<雷区>, 雷区 = Array<JsPoint>
+   * @param ctx
+   * @param {Record<number, Array<Array<JsPoint>>>} area
+   */
+  function sweepByNestedArea(ctx, area) {
+    return Object.values(area).some((arr) => {
+      for (let i = 0; i < arr.length; i++) {
+        for (let j = i + 1; j < arr.length; j++) {
+          let big = arr[i], small = arr[j]
+          if (big.length === small.length) continue
+          if (big.length < small.length) {
+            big = arr[j]
+            small = arr[i]
+          }
+          big = [...big]
+          if (small.some((ps) => {
+            const index = big.findIndex((pb) => pb.Equal(ps))
+            if (index < 0) return true
+            big.splice(index, 1)
+          })) continue
+          if (big.length) {
+            const p = big[0]
+            checkGameOver(ctx, () => expandByDFS(ctx, p.x, p.y))
+            return true
           }
         }
       }
-    }
-    msg("当前状态无法自动扫雷，请改变状态后再试！")
+      return false
+    })
   }
 </script>
 </body>
