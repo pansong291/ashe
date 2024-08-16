@@ -1,0 +1,20 @@
+{
+  "pluginName": "自动扫雷",
+  "description": "都已经在摸鱼了，居然还要偷懒？！！",
+  "version": "1.0.0",
+  "author": "paso",
+  "main": "html/game/minesweeper.html",
+  "logo": "img/game/minesweeper/logo.png",
+  "pluginSetting": {
+    "single": true
+  },
+  "features": [
+    {
+      "code": "launch",
+      "explain": "开始碰碰运气吧",
+      "cmds": [
+        "自动扫雷"
+      ]
+    }
+  ]
+}
