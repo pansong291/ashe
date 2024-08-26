@@ -507,12 +507,14 @@
     if (mine_count > board_total) mine_count = board_total
     sweep_count = 0
     text_left_count.innerText = mine_count
-    text_density.innerText = (100 * mine_count / board_total).toFixed(2) + '%'
+    text_density.innerText = (100 * mine_count / board_total).toFixed(2) + "%"
     game_over = false
 
+    while (board_states.length > board_row) board_states.pop()
     for (let i = 0; i < board_row; i++) {
       board_states[i] = []
     }
+    while (mine_map.length > board_row) mine_map.pop()
     for (let i = 0; i < board_row; i++) {
       mine_map[i] = []
     }
@@ -802,6 +804,18 @@
    */
   function handleMineAreas(ctx, areas) {
     let acc = 0, mark = 0
+    const changeArea = (count, blocks, i) => {
+      if (count === 0) {
+        for (const p of blocks) acc += expandByDFS(ctx, p.x, p.y)
+        areas.splice(i, 1)
+        return true
+      }
+      if (count === blocks.length) {
+        mark = markMineFlag(ctx, blocks) ? Number.POSITIVE_INFINITY : 0
+        areas.splice(i, 1)
+        return true
+      }
+    }
     loopMineAreas(areas, (big, small, i) => {
       // 去重
       if (big.equals(small)) {
@@ -812,17 +826,8 @@
       const blocks = big.removeNested(small)
       if (blocks?.length) {
         const count = big.count - small.count
-        if (count === 0) {
-          for (const p of blocks) acc += expandByDFS(ctx, p.x, p.y)
-          areas.splice(i, 1)
-          return true
-        } else if (count === blocks.length) {
-          mark = markMineFlag(ctx, blocks) ? Number.POSITIVE_INFINITY : 0
-          areas.splice(i, 1)
-          return true
-        } else {
-          return addMineArea(areas, new MineArea(count, blocks))
-        }
+        if (changeArea(count, blocks, i)) return true
+        return addMineArea(areas, new MineArea(count, blocks))
       }
       if (Number(text_left_count.innerText) > auto_count_limit) return
 
@@ -830,6 +835,8 @@
       const intersect = big.intersect(small)
       if (!intersect.length)
         addMineArea(areas, new MineArea(big.count + small.count, [...big.blocks, ...small.blocks]))
+    }, (it, i) => {
+      if (changeArea(it.count, it.blocks, i)) return true
     })
     if (acc) return acc
     return mark
