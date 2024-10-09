@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+  <meta charset="UTF-8">
+  <title>Github 镜像加速节点测试</title>
+  <style>
+      img {
+          width: 64px;
+          height: 64px;
+      }
+
+      * {
+          font-family: "JetBrains Mono", source-code-pro, "SF Mono", Monaco, Menlo, Consolas, "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", "Courier New", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', monospace;
+      }
+  </style>
+</head>
+<body>
+<h3>Github 镜像加速节点测试</h3>
+<div><textarea id="ipt-mirrors" rows="10" cols="50" placeholder="输入镜像地址，每行一个">
+https://github.moeyy.xyz
+https://ghproxy.net
+https://gh-proxy.com
+https://gh-proxy.llyke.com
+https://gh.cache.cloudns.org
+https://gh.ddlc.top
+https://slink.ltd
+https://gh.con.sh
+https://sciproxy.com
+https://cf.ghproxy.cc
+https://ghproxy.cn
+https://ghproxy.cc
+https://gh.jiasu.in
+https://mirror.ghproxy.com
+https://hub.gitmirror.com
+https://ghps.cc
+https://ghproxy.org
+https://ghproxy.top
+https://gh.ezctrl.cn
+https://gh.sixyin.com
+https://gh.bink.cc
+https://gh.noki.icu
+</textarea></div>
+<div>
+  <button id="btn-test-all">测试全部</button>
+  <button id="btn-get-fastest">获取最快</button>
+</div>
+<div id="div-output"></div>
+</body>
+<script>
+  const ipt_mirrors = document.getElementById('ipt-mirrors')
+  const btn_test_all = document.getElementById('btn-test-all')
+  const btn_get_fastest = document.getElementById('btn-get-fastest')
+  const div_output = document.getElementById('div-output')
+
+  const testAllMirror = async (mirrors) => {
+    return Promise.allSettled(mirrors.map((mirror) => {
+      if (!mirror.endsWith('/')) mirror += '/'
+      return new Promise((resolve, reject) => {
+        const imgElm = document.createElement('img')
+        imgElm.alt = mirror
+        imgElm.title = mirror
+        imgElm.onload = resolve
+        imgElm.onerror = reject
+        imgElm.src = `${mirror}https://raw.githubusercontent.com/pansong291/Pictures/master/watermark/success.svg?t=${Date.now()}`
+        div_output.append(imgElm)
+      })
+    }))
+  }
+
+  const findMirror = async (mirrors) => {
+    const xhrs = mirrors.map((mirror) => {
+      if (!mirror.endsWith('/')) mirror += '/'
+      const xhr = new XMLHttpRequest()
+      xhr._mirror = mirror
+      xhr.open('GET', `${mirror}https://raw.githubusercontent.com/pansong291/Pictures/master/test.png?t=${Date.now()}`)
+      return xhr
+    })
+    const promises = xhrs.map((xhr) => new Promise((resolve, reject) => {
+      xhr.addEventListener('abort', reject)
+      xhr.addEventListener('error', reject)
+      xhr.addEventListener('timeout', reject)
+      xhr.addEventListener('load', (e) => resolve(e.target?._mirror))
+      xhr.send()
+    }))
+    let fastest = null
+    try {
+      fastest = await Promise.any(promises)
+      xhrs.forEach((xhr) => xhr.abort())
+    } catch (e) {
+      console.error('all failed', e)
+    }
+    return fastest
+  }
+
+  const getMirrors = () => ipt_mirrors.value.split(/\s+/).filter((it) => !!it)
+
+  const setButtonDisabled = (disabled) => {
+    if (disabled) {
+      btn_test_all.setAttribute('disabled', 'disabled')
+      btn_get_fastest.setAttribute('disabled', 'disabled')
+    } else {
+      btn_test_all.removeAttribute('disabled')
+      btn_get_fastest.removeAttribute('disabled')
+    }
+  }
+
+  btn_test_all.addEventListener('click', () => {
+    setButtonDisabled(true)
+    div_output.innerText = ''
+    testAllMirror(getMirrors()).then(() => {
+      const pElm = document.createElement('p')
+      pElm.innerText = '测试结束'
+      div_output.append(pElm)
+      setButtonDisabled(false)
+    })
+  })
+
+  btn_get_fastest.addEventListener('click', () => {
+    setButtonDisabled(true)
+    div_output.innerText = ''
+    findMirror(getMirrors()).then((mirror) => {
+      const pElm = document.createElement('p')
+      pElm.innerText = mirror || '全部失败'
+      div_output.append(pElm)
+      setButtonDisabled(false)
+    })
+  })
+</script>
+</html>
