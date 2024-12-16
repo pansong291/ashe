@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "author": "paso",
   "main": "html/game/minesweeper.html",
-  "logo": "img/game/minesweeper/logo.png",
+  "logo": "logo.png",
   "pluginSetting": {
     "single": true
   },

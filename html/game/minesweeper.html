@@ -155,6 +155,11 @@
   Your browser does not support the canvas element.
 </canvas>
 <p>
+  预设：<button type="button" id="btn-preset-low">初级</button>
+  <button type="button" id="btn-preset-mid">中级</button>
+  <button type="button" id="btn-preset-high">高级</button>
+</p>
+<p>
   <label>行：<input type="number" id="input-board-row" value="15" onwheel></label>
   <label>列：<input type="number" id="input-board-col" value="20" onwheel></label>
   <label>雷数：<input type="number" id="input-mine-count" value="40" onwheel></label>
@@ -433,8 +438,33 @@
     canvas_main.addEventListener("contextmenu", (evt) => evt.preventDefault())
     document.getElementById("btn-reset").addEventListener("click", () => reset(canvas_main, ctx))
     document.getElementById("btn-auto").addEventListener("click", () => autoSweep(ctx))
+    document.getElementById("btn-preset-low").addEventListener("click", () => preset(0))
+    document.getElementById("btn-preset-mid").addEventListener("click", () => preset(1))
+    document.getElementById("btn-preset-high").addEventListener("click", () => preset(2))
 
     reset(canvas_main, ctx)
+  }
+
+  /**
+   * 预设难度
+   */
+  function preset(l0) {
+    let row = 9, col = 9, m = 10
+    switch (l0) {
+      case 1:
+        row = 16
+        col = 16
+        m = 40
+        break
+      case 2:
+        row = 16
+        col = 30
+        m = 99
+        break
+    }
+    input_board_row.value = row
+    input_board_col.value = col
+    input_mine_count.value = m
   }
 
   /**
