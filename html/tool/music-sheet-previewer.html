@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+  <meta charset="UTF-8">
+  <title>Music Sheet Previewer</title>
+  <style>
+      #app {
+          font-size: 14px;
+          --beat-time-color: #888;
+      }
+
+      .note {
+          display: inline-grid;
+          grid-template-columns: repeat(2, auto);
+          grid-template-rows: repeat(3, auto);
+          grid-template-areas: '. t' 'l c' '. b';
+          justify-items: center;
+          line-height: 1em;
+      }
+
+      .note-semitone {
+          grid-area: l;
+          justify-self: end;
+      }
+
+      .note-up {
+          grid-area: t;
+      }
+
+      .note-number {
+          grid-area: c;
+          font-size: 24px;
+          line-height: 24px;
+      }
+
+      .note-down {
+          grid-area: b;
+      }
+
+      .beat {
+          display: inline-flex;
+          justify-content: start;
+          align-items: start;
+          gap: 4px;
+      }
+
+      .beat-notes, .beat-time {
+          display: flex;
+          flex-direction: column;
+          justify-content: start;
+          align-items: center;
+      }
+
+      .beat-notes {
+          gap: 8px;
+      }
+
+      .error-text {
+          color: red;
+      }
+
+      .beat-time {
+          margin-top: 1em;
+          color: var(--beat-time-color);
+      }
+
+      .beat-time-splitter {
+          align-self: stretch;
+          border-bottom: 1px solid var(--beat-time-color);
+      }
+
+      .hide-me {
+          visibility: hidden;
+      }
+
+      .click-area:hover:not(:has(.click-area:hover)) {
+          cursor: pointer;
+          outline: 1px dashed red;
+          outline-offset: 2px;
+      }
+
+      .page {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+      }
+
+      .page > textarea {
+          resize: vertical;
+      }
+
+      .segment-list {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+      }
+
+      .segment {
+          display: flex;
+          justify-content: space-between;
+          align-items: start;
+          padding: 8px;
+          background: #eee;
+          border-radius: 4px;
+      }
+
+      .segment .del-btn {
+          visibility: hidden;
+      }
+
+      .segment:hover .del-btn {
+          visibility: visible;
+      }
+
+      .controller {
+          display: flex;
+          gap: 8px;
+          user-select: none;
+      }
+
+      .beats-container {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 16px;
+      }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+</body>
+<script src="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-M/vue/3.2.31/vue.global.min.js"
+        type="application/javascript"></script>
+<script>
+  const Note = {
+    props: {
+      semi: String, // '#' | 'b' | ''
+      num: Number, // 0~7
+      shift: Number
+    },
+    computed: {
+      noteUp: {
+        get() {
+          if (this.shift <= 0) return "\u200B"
+          if (this.shift <= 1) return "."
+          if (this.shift <= 2) return ":"
+          return `${this.shift}·`
+        }
+      },
+      noteDown: {
+        get() {
+          if (this.shift >= 0) return "\u200B"
+          if (this.shift >= -1) return "˙"
+          if (this.shift >= -2) return ":"
+          return `${-this.shift}·`
+        }
+      }
+    },
+    template: `
+      <div class="note click-area">
+        <div v-if="semi" class="note-semitone">{{ semi }}</div>
+        <div class="note-up">{{ noteUp }}</div>
+        <div class="note-number">{{ num }}</div>
+        <div class="note-down">{{ noteDown }}</div>
+      </div>
+    `
+  }
+  const Beat = {
+    components: {
+      Note
+    },
+    props: {
+      notes: Array,
+      numerator: Number,
+      denominator: Number,
+      showTime: Boolean
+    },
+    emits: ["noteClicked", "timeClicked"],
+    methods: {
+      onNoteClick(index) {
+        this.$emit("noteClicked", index)
+      },
+      onTimeClick() {
+        this.$emit("timeClicked")
+      }
+    },
+    template: `
+      <div class="beat click-area">
+        <div class="beat-notes">
+          <Note v-for="(note, i) in notes" :num="note.num" :semi="note.semi" :shift="note.shift"
+                @click.stop="onNoteClick(i)" />
+          <div v-if="!notes?.length" class="error-text">ERR</div>
+        </div>
+        <div v-if="numerator !== denominator" class="beat-time click-area" :class="showTime ? '' : 'hide-me'"
+             @click.stop="onTimeClick">
+          <div class="beat-time-up">{{ numerator }}</div>
+          <div class="beat-time-splitter" />
+          <div v-if="denominator !== 1" class="beat-time-down">{{ denominator }}</div>
+        </div>
+      </div>
+    `
+  }
+  const AppConfig = {
+    data() {
+      return {
+        segments: [],
+        preview: '',
+        text: "1,2,3,1,1,2,3,1,3,4,5*2,3,4,5*2,5/2,6/2,5/2,4/2,3,1,5/2,6/2,5/2,4/2,3,1,1,5-1,1*2,1,5-,1*2,0*8,1&2-&3+2*2,7*1/3,7/3,7*2/3,1#,2,2b,1,3b+,",
+        showTime: true
+      }
+    },
+    components: {
+      Beat
+    },
+    computed: {
+      beats: {
+        get() {
+          const text = (this.preview || this.text).replaceAll(/\s+/g, "")
+          if (!text) return []
+          const list = text.split(",")
+          const last = list.length - 1
+          if (!list[last]) list.splice(last, 1)
+          return list.map(this.parseBeat)
+        }
+      }
+    },
+    methods: {
+      setPreview(index) {
+        if (index < 0) this.preview = ''
+        else this.preview = this.segments[index]
+      },
+      removeSegment(index) {
+        this.segments.splice(index, 1)
+        this.preview = ''
+      },
+      addSegment() {
+        let text = this.text.trim()
+        if (text) {
+          if (!text.endsWith(",")) text += ","
+          this.segments.push(text)
+        }
+        this.text = ""
+        this.$refs.textarea.focus()
+      },
+      sanitizeText() {
+        this.text = this.text.replaceAll(/\/\*[\d\D]*?\*\//g, "")
+          .replaceAll(/\/\/[^\n]*/g, "")
+          .replaceAll(/\s+/g, "")
+          .replace(/\[.+]/, "")
+        this.$refs.textarea.focus()
+      },
+      onBeatClick(index) {
+        const start = this.findBeatStart(index)
+        this.setSelection(start, this.text.indexOf(",", start))
+      },
+      onNoteClick(bInd, nInd) {
+        const text = this.text
+        let start = this.findBeatStart(bInd)
+        for (; start < text.length; start++) {
+          if (nInd === 0) break
+          if (text[start] === "&") nInd--
+        }
+        this.setSelection(start, this.minIndexOf(start, "&", "*", "/", ","))
+      },
+      onTimeClick(index) {
+        let start = this.findBeatStart(index)
+        start = this.minIndexOf(start, "*", "/")
+        this.setSelection(start, this.text.indexOf(",", start))
+      },
+      findBeatStart(index) {
+        let start = 0
+        for (; start < this.text.length; start++) {
+          if (index === 0) break
+          if (this.text[start] === ",") index--
+        }
+        return start
+      },
+      minIndexOf(start, ...targets) {
+        let min = -1
+        for (let it of targets) {
+          let ind = this.text.indexOf(it, start)
+          if (ind >= 0) {
+            if (min < 0) min = ind
+            else min = Math.min(min, ind)
+          }
+        }
+        return min
+      },
+      setSelection(start, end) {
+        this.$refs.textarea.focus()
+        this.$refs.textarea.setSelectionRange(start, end)
+      },
+      parseBeat(b) {
+        try {
+          const beatReg = /^([^*/]+)((?:[*/]\d+)*)$/
+          const mArr = b.match(beatReg)
+          const rate = this.parseRate(mArr[2], { num: 1, den: 1 })
+          const d = this.gcd(rate.num, rate.den)
+          return {
+            notes: mArr[1].split("&").map(this.parseNote),
+            num: rate.num / d,
+            den: rate.den / d
+          }
+        } catch (e) {
+          console.error(`beat parse error: "${b}"`, e)
+          return {
+            notes: [],
+            num: 1,
+            den: 1
+          }
+        }
+      },
+      /**
+       * @param {string} n
+       * @return {{num: number, semi: string, shift: number}}
+       */
+      parseNote(n) {
+        const num = parseInt(n[0])
+        if ((!num && num !== 0) || num < 0 || num > 7) throw `unsupported_note ${n[0]}`
+        const note = {
+          num,
+          semi: "",
+          shift: 0
+        }
+        let next = 1
+        switch (n[1]) {
+          case "#":
+          case "b":
+            note.semi = n[1]
+            next++
+            break
+        }
+        note.shift = this.parseShift(n.substring(next), 0)
+        return note
+      },
+      /**
+       * @param {string} str
+       * @param {number} acc
+       * @return {number}
+       */
+      parseShift(str, acc) {
+        if (!str) return acc
+        // +2 数字省略则为 1
+        const rest = str.substring(1).match(/^(\d+)?(.*)$/)
+        let n = 1
+        if (rest[1]) n = parseInt(rest[1])
+        if (!n) throw `unsupported_time ${rest[1]}`
+        if (str[0] === "-") n = -n
+        else if (str[0] !== "+") throw `unsupported_operator ${str[0]}`
+        return this.parseShift(rest[2], acc + n)
+      },
+      /**
+       * @param {string} str
+       * @param {{num: number, den: number}} acc
+       * @return {{num: number, den: number}}
+       */
+      parseRate(str, acc) {
+        if (!str) return acc
+        // *21/5  乘除后面的数字是必有的
+        const rest = str.substring(1).match(/^(\d+)?(.*)$/)
+        const n = parseInt(rest[1])
+        if (!n || n <= 0) throw `unsupported_time_rate ${rest[1]}`
+        switch (str[0]) {
+          case "/":
+            acc.den *= n
+            break
+          case "*":
+            acc.num *= n
+            break
+          default:
+            throw `unsupported_operator ${str[0]}`
+        }
+        return this.parseRate(rest[2], acc)
+      },
+      /**
+       * 求最大公约数
+       * @param {number} a
+       * @param {number} b
+       * @return {number}
+       */
+      gcd(a, b) {
+        let big = Math.max(a, b)
+        let small = Math.min(a, b)
+        while (small !== 0) {
+          let temp = small
+          small = big % small
+          big = temp
+        }
+        return big
+      }
+    },
+    template: `
+      <div class="page">
+        <div class="segment-list" @pointerleave="setPreview(-1)">
+          <div v-for="(seg, i) in segments" class="segment" @pointerenter="setPreview(i)">
+            <div>{{ seg }}</div>
+            <button class="del-btn" @click="removeSegment(i)">X</button>
+          </div>
+        </div>
+        <div class="controller">
+          <button @click="addSegment">添加片段</button>
+          <button @click="sanitizeText">规整化文本</button>
+          <label><input type="checkbox" v-model="showTime">显示时值</label>
+        </div>
+        <textarea ref="textarea" v-model="text" />
+        <div class="beats-container">
+          <Beat v-for="(beat, i) in beats" :notes="beat.notes" :numerator="beat.num" :denominator="beat.den"
+                :show-time="showTime" @click="onBeatClick(i)" @noteClicked="(j) => onNoteClick(i, j)"
+                @timeClicked="onTimeClick(i)" />
+        </div>
+      </div>
+    `
+  }
+  Vue.createApp(AppConfig).mount("#app")
+</script>
+</html>
