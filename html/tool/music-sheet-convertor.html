@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+  <meta charset="UTF-8">
+  <title>Music Sheet Convertor</title>
+  <script>
+    window.TextEncoder = null
+    window.TextDecoder = null
+    window._utf16Encoder = null
+  </script>
+  <script src="../../js/lib/text-encoding/encoding.min.js" type="application/javascript"></script>
+  <script src="../../js/music-sheet/sheet.js"></script>
+  <script src="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/jschardet/3.0.0/jschardet.min.js"
+          type="application/javascript"></script>
+  <script src="https://lf9-cdn-tos.bytecdntp.com/cdn/expire-1-M/FileSaver.js/2.0.4/FileSaver.min.js"
+          type="application/javascript"></script>
+  <script src="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/jszip/3.7.1/jszip.min.js"
+          type="application/javascript"></script>
+  <script src="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-M/vue/3.2.31/vue.global.min.js"
+          type="application/javascript"></script>
+  <style>
+      #app {
+          max-width: 1200px;
+          margin: 0 auto;
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+          padding: 24px;
+      }
+  </style>
+  <style data-desc="main">
+      .file-drop-area {
+          height: 300px;
+          border: 2px dashed #ccc;
+          border-radius: 8px;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          cursor: pointer;
+          transition: all 0.3s ease;
+      }
+
+      .file-drop-area:hover {
+          border-color: #2196F3;
+          background-color: #e3f2fd;
+      }
+
+      .file-drop-area.highlight {
+          border-color: #4CAF50;
+          background-color: #f0fff0;
+      }
+
+      .file-drop-info {
+          color: #aaa;
+          transition: all 0.3s ease;
+      }
+
+      .file-drop-area:hover .file-drop-info {
+          color: #2196F3;
+      }
+
+      .file-drop-area.highlight .file-drop-info {
+          color: #4CAF50;
+      }
+
+      .file-list {
+          border: 1px solid #ddd;
+          padding: 0 10px;
+          max-height: 300px;
+          overflow-y: auto;
+      }
+
+      .read-button {
+          display: block;
+          padding: 10px 30px;
+          background: #2196F3;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          transition: background 0.3s;
+      }
+
+      .read-button:hover {
+          background: #1976D2;
+      }
+
+      .read-button:disabled {
+          background: #90caf9;
+          cursor: not-allowed;
+      }
+
+      .content-output {
+          white-space: pre-wrap;
+          padding: 20px;
+          background: #f8f9fa;
+          border: 1px solid #ddd;
+          font-size: 14px;
+          font-family: "JetBrains Mono", source-code-pro, "SF Mono", Monaco, Menlo, Consolas, "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", "Courier New", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', monospace;
+      }
+  </style>
+  <style data-desc="file-item">
+      .file-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px;
+          border-bottom: 1px solid #ddd;
+      }
+
+      .file-item:last-child {
+          border-bottom: none;
+      }
+
+      .file-info {
+          flex-grow: 1;
+          margin-right: 15px;
+      }
+
+      .file-name {
+          font-weight: 500;
+          margin-bottom: 4px;
+          color: #333;
+      }
+
+      .file-meta {
+          display: flex;
+          justify-content: start;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.85em;
+          font-family: monospace;
+      }
+
+      .file-size {
+          background: #e3f2fd;
+          color: #2196F3;
+          padding: 2px 8px;
+          border-radius: 10px;
+      }
+
+      .file-type {
+          background: #f0f4c3;
+          color: #827717;
+          padding: 2px 8px;
+          border-radius: 10px;
+      }
+
+      .delete-btn {
+          background: #ff4444;
+          color: white;
+          border: none;
+          padding: 5px 10px;
+          border-radius: 3px;
+          cursor: pointer;
+          transition: background 0.3s;
+      }
+
+      .delete-btn:hover {
+          background: #cc0000;
+      }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+</body>
+<script>
+  function createZip() {
+    const zip = new JSZip()
+    return {
+      addAsUTF8(path, text) {
+        zip.file(path, text)
+      },
+      addAsUTF16LE(path, text) {
+        if (!window._utf16Encoder) {
+          window._utf16Encoder = new TextEncoder("utf-16le", { NONSTANDARD_allowLegacyEncoding: true })
+        }
+        const utf16Data = window._utf16Encoder.encode("\uFEFF" + text)
+        zip.file(path, utf16Data, {
+          binary: true,
+          compression: "DEFLATE"
+        })
+      },
+      download() {
+        zip.generateAsync({ type: "blob" }).then(function(content) {
+          saveAs(content, "archive.zip")
+        })
+      }
+    }
+  }
+</script>
+<script type="text/x-template" id="main">
+  <div class="file-drop-area" :class="{ highlight: isDragOver }" @click="onFileDropAreaClick"
+       @dragover.prevent="onFileDragOver" @dragleave="isDragOver = false" @drop.prevent="onFileDrop">
+    <input type="file" ref="fileInput" hidden="hidden" @change="e => handleFiles(e.target.files)" />
+    <div class="file-drop-info">点击选择文件 或 拖拽文件到此处</div>
+  </div>
+  <div class="file-list">
+    <FileItem v-for="it in selectedFiles" :file="it" @fileDelete="onFileDelete"></FileItem>
+  </div>
+  <button class="read-button" :disabled="readBtnDisabled" @click="readFiles">读取所有文件</button>
+  <div class="content-output">{{ outputText }}</div>
+</script>
+<script type="text/x-template" id="file-item">
+  <div class="file-item">
+    <div class="file-info">
+      <div class="file-name">{{ file.name }}</div>
+      <div class="file-meta">
+        <span class="file-size">{{ formatedFileSize }}</span>
+        <span class="file-type">{{ file.type || "未知类型" }}</span>
+      </div>
+    </div>
+    <button class="delete-btn" @click="onFileDelete()">删除</button>
+  </div>
+</script>
+<script>
+  const FileItem = {
+    template: "#file-item",
+    props: ["file"],
+    emits: ["fileDelete"],
+    computed: {
+      formatedFileSize() {
+        const bytes = this.file.size
+        if (bytes === 0) return "0 B"
+        const units = ["B", "KB", "MB", "GB"]
+        const exponent = Math.min(
+          Math.floor(Math.log(bytes) / Math.log(1024)),
+          units.length - 1
+        )
+        const value = (bytes / Math.pow(1024, exponent)).toFixed(2)
+        return `${value.replace(/\.0+$/, "")} ${units[exponent]}`
+      }
+    },
+    methods: {
+      onFileDelete() {
+        this.$emit("fileDelete", this.file)
+      }
+    }
+  }
+  Vue.createApp({
+    template: "#main",
+    data() {
+      return {
+        selectedFiles: [],
+        isDragOver: false,
+        readingFiles: false,
+        outputText: ""
+      }
+    },
+    components: {
+      FileItem
+    },
+    computed: {
+      readBtnDisabled() {
+        return this.selectedFiles.length <= 0 || this.readingFiles
+      }
+    },
+    methods: {
+      /** 点击触发文件选择 */
+      onFileDropAreaClick() {
+        console.log("click")
+        this.$refs.fileInput.click()
+      },
+      /** 拖放处理逻辑 */
+      onFileDragOver(e) {
+        if (e.dataTransfer.types?.includes("Files")) {
+          this.isDragOver = true
+          e.dataTransfer.dropEffect = "copy"
+        } else {
+          e.dataTransfer.dropEffect = "none"
+        }
+      },
+      onFileDrop(e) {
+        this.isDragOver = false
+        this.handleFiles(e.dataTransfer.files)
+      },
+      /** 处理文件选择（点击和拖放） */
+      handleFiles(files) {
+        this.selectedFiles.push(...Array.from(files))
+        // 清空 input 以便重复选择相同文件
+        this.$refs.fileInput.value = ""
+      },
+      onFileDelete(file) {
+        const idx = this.selectedFiles.indexOf(file)
+        if (idx >= 0) this.selectedFiles.splice(idx, 1)
+      },
+      /** 读取文件内容 */
+      async readFiles() {
+        this.readingFiles = true
+        this.outputText = ""
+        const source = "sky-studio-json"
+        const target = "sky-studio-abc"
+        for (const file of this.selectedFiles) {
+          try {
+            const content = await this.readFile(file)
+            this.outputText += `=== ${file.name} ===\n${content}\n\n`
+            let mn = new MusicParser(source).parse(content)
+            const converted = new MusicFormatter(target).format(mn)
+            this.outputText += "=== 转换后 ===\n" + converted + "\n\n"
+            mn = new MusicParser(target).parse(converted)
+            this.outputText += "=== 回转 ===\n" + new MusicFormatter(source).format(mn) + "\n\n"
+          } catch (error) {
+            this.outputText += `=== ${file.name} 读取失败 ===\n${error}\n\n`
+            console.error(error)
+          }
+        }
+        this.readingFiles = false
+      },
+      /** 封装 FileReader 为 Promise */
+      readFile(file) {
+        return new Promise((resolve, reject) => {
+          // 处理二进制文件
+          if (!file.type.startsWith("text/") && file.type !== "") {
+            resolve("[非文本文件内容]")
+            return
+          }
+
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            try {
+              const buffer = e.target.result
+              const binaryString = String.fromCharCode(...new Uint8Array(buffer))
+              const encoding = jschardet.detect(binaryString).encoding
+              const decoder = new TextDecoder(encoding, { ignoreBOM: false })
+              resolve(decoder.decode(buffer))
+            } catch (error) {
+              reject(`解码失败：${error.message}`)
+            }
+          }
+          reader.onerror = (e) => reject(e.target.error)
+          reader.readAsArrayBuffer(file)
+        })
+      }
+    },
+    mounted() {
+      const source = "sky-studio-abc"
+      const target = "piano-wizard-yp"
+      const content = "<DontCopyThisLine> 120 0 16 author transcribedBy\n.A1.A1C5...."
+      this.outputText += `=== ABC ===\n${content}\n\n`
+      try {
+        let mn = new MusicParser(source).parse(content)
+        const converted = new MusicFormatter(target).format(mn)
+        this.outputText += "=== 转换后 ===\n" + converted + "\n\n"
+      } catch (error) {
+        this.outputText += `=== 异常 ===\n${error}\n\n`
+        console.error(error)
+      }
+    }
+  }).mount("#app")
+</script>
+</html>
