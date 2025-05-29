@@ -291,7 +291,7 @@
         this.readingFiles = true
         this.outputText = ""
         const source = "sky-studio-json"
-        const target = "sky-studio-abc"
+        const target = "fengxu-genshin-2"
         for (const file of this.selectedFiles) {
           try {
             const content = await this.readFile(file)
@@ -335,9 +335,9 @@
       }
     },
     mounted() {
-      const source = "sky-studio-abc"
+      const source = "fengxu-genshin-2"
       const target = "piano-wizard-yp"
-      const content = "<DontCopyThisLine> 120 0 16 author transcribedBy\n.A1.A1C5...."
+      const content = "parseGenshinImpactMusic(\"\", \"500{C3D3}<1000>{B3}{B5}<2500>{C4}(100){C5}(100)\", 2)"
       this.outputText += `=== ABC ===\n${content}\n\n`
       try {
         let mn = new MusicParser(source).parse(content)

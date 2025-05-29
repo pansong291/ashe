@@ -115,12 +115,15 @@
   }
 
   const langUtil = {
+    CHAR_A: 65,
+    CHAR_0: 48,
     /**
      * 分组
      * @template T
+     * @template K
      * @param {T[]} arr
-     * @param {(T) => keyof T} keyMapper
-     * @return {Record<keyof T, T[]>}
+     * @param {(T) => K} keyMapper
+     * @return {Record<K, T[]>}
      */
     groupBy(arr, keyMapper) {
       const result = {}
@@ -350,13 +353,12 @@
     let firstLine = `<DontCopyThisLine> ${bpm} ${mn.keyNote % 12} ${16} ${mn.author} ${mn.transcribedBy}`
     let secondLine = ""
     mn.beats.forEach((beat) => {
-      beat.rate.a *= lcm
-      const dotCount = beat.rate.simplify().a - 1
+      const dotCount = new Rate(beat.rate.a * lcm, beat.rate.b).simplify().a - 1
       if (dotCount < 0) return
       if (beat.tones.length) {
         beat.tones.forEach((it) => {
           const note = musicUtil.tet12ToBasicNote(it)
-          if (note < 0 || note > 14) throw RangeError("无法转换的音符：" + note)
+          if (note < 0 || note > 14) throw RangeError("无法转换的音符: " + note)
           secondLine += String.fromCharCode(Math.floor(note / 5) + 65) + ((note % 5) + 1)
         })
         secondLine += " "
@@ -543,6 +545,36 @@
         return new MusicNotation("", infos[3], infos[4], pitchLevel, bpm)
       },
       /**
+       * @param {string} str
+       * @param {number} i
+       * @param {(number) => void} onResult
+       * @param {(number) => void} onError
+       * @return {number}
+       */
+      parseKeys(str, i, onResult, onError) {
+        let abc = -1
+        for (; i < str.length; i++) {
+          const ch = str.charAt(i)
+          if (abc < 0) {
+            if (ch >= "A" && ch <= "C") abc = ch.charCodeAt(0) - langUtil.CHAR_A
+            else {
+              i--
+              break
+            }
+          } else {
+            if (ch >= "1" && ch <= "5") {
+              onResult(abc * 5 + ch.charCodeAt(0) - langUtil.CHAR_0 - 1)
+              abc = -1
+            } else {
+              if (ch >= "A" && ch <= "C") i--
+              onError(i)
+            }
+          }
+        }
+        if (abc >= 0) onError(i - 1)
+        return i
+      },
+      /**
        * @param {number[]} notes
        * @param {Beat[]} beats
        * @param {number} dotCount
@@ -554,8 +586,8 @@
         // 此处需要清空 notes 数组
         beats.push(new Beat(new Rate(rateA), notes.splice(0, notes.length)))
       },
-      errorAt(line, column) {
-        throw SyntaxError(`解析错误 (行: ${line}, 列: ${column})`)
+      errorAt(line, column, char) {
+        throw SyntaxError(`解析错误 (行: ${line}, 列: ${column}, 字符: ${char})`)
       }
     }
     return function(str) {
@@ -567,54 +599,232 @@
       let lineNumber = 2, lineIndex = -1
       for (let i = 0; i < keysLine.length; i++) {
         const ch = keysLine.charAt(i)
+        if (ch === " ") continue
         if (ch === "\n") {
           lineIndex = i
           lineNumber++
-          continue
-        }
-        if (ch === ".") {
+        } else if (ch === ".") {
           dotCount++
-          continue
-        }
-        if (ch === " ") continue
-        const cc = ch.charCodeAt(0) - 65
-        // [A, C]
-        if (cc >= 0 && cc <= 2) {
+        } else if (ch >= "A" && ch <= "C") {
           helper.transferNotes(notes, mn.beats, dotCount)
           dotCount = 0
-          let abc = -1
-          for (; i < keysLine.length; i++) {
-            const ch = keysLine.charAt(i)
-            if (abc < 0) {
-              const cc = ch.charCodeAt(0) - 65
-              // [A, C]
-              if (cc >= 0 && cc <= 2) abc = cc
-              else {
-                i--
-                break
-              }
-            } else {
-              const n = parseInt(ch)
-              // [1, 5]
-              if (n >= 1 && n <= 5) {
-                notes.push(musicUtil.basicNoteTo12TET(abc * 5 + n - 1))
-                abc = -1
-              } else helper.errorAt(lineNumber, i - lineIndex)
-            }
-          }
-          if (abc >= 0) helper.errorAt(lineNumber, i - lineIndex)
-        } else helper.errorAt(lineNumber, i - lineIndex)
+          i = helper.parseKeys(keysLine, i, (note) => {
+            notes.push(musicUtil.basicNoteTo12TET(note))
+          }, (i) => {
+            helper.errorAt(lineNumber, i - lineIndex, keysLine.charAt(i))
+          })
+        } else helper.errorAt(lineNumber, i - lineIndex, keysLine.charAt(i))
       }
       if (notes.length) helper.transferNotes(notes, mn.beats, Math.max(dotCount, 3))
       return mn
     }
   }
 
-  // TODO
   parsers["fengxu-genshin-2"] = () => {
+    /**
+     * @typedef {Object} FengxuKey2
+     * @property {number[]} keys
+     * @property {number} start 开始时间
+     * @property {number} wait 等待时间
+     * @property {number} hold 按住时间
+     */
+    const helper = {
+      result: new MusicNotation(),
+      /**
+       * @param {string} str
+       * @return {number|undefined}
+       */
+      parseKeyByName(str) {
+        if (!str?.length) return
+        if (str.length === 2) {
+          let base = str.charCodeAt(0) - langUtil.CHAR_A
+          if (base < 0 || base > 6) return
+          base -= 2
+          if (base < 0) base += 7
+          let shift = str.charCodeAt(1) - langUtil.CHAR_0
+          if (shift < 0 || shift > 9) return
+          shift -= 4
+          // fengxu 的乐谱音名是错误的，所以才有这个自增，如果改正了就没有
+          if (base < 5) shift++
+          return musicUtil.basicNoteTo12TET(base) + shift * 12
+        } else if (str.length === 4) {
+          const n1 = this.parseKeyByName(str.substring(0, 2)) + 1
+          const n2 = this.parseKeyByName(str.substring(2)) - 1
+          if (n1 === n2) return n1
+        }
+      },
+      /**
+       * @param {string} str
+       * @param {number} i
+       * @param {function(number[]): void} onResult
+       * @return {number}
+       */
+      parseKeys(str, i, onResult) {
+        let keys = []
+        let opened = false
+        let curKey = ""
+        for (; i < str.length; i++) {
+          const ch = str.charAt(i)
+          if (opened) {
+            if (ch === "}") {
+              opened = false
+              const k = this.parseKeyByName(curKey)
+              if (k === void 0) this.errorAt(i)
+              else keys.push(k)
+              curKey = ""
+            } else if ((ch >= "A" && ch <= "G") || (ch >= "0" && ch <= "9")) {
+              curKey += ch
+            } else this.errorAt(i)
+          } else if (ch === "{") {
+            opened = true
+          } else {
+            i--
+            break
+          }
+        }
+        if (opened) this.errorAt(i - 1)
+        onResult(keys)
+        return i
+      },
+      /**
+       * @param {string} str
+       * @param {number} i
+       * @param {string} open
+       * @param {string} close
+       * @param {(number) => void} onResult
+       * @return {number}
+       */
+      parseTime(str, i, open, close, onResult) {
+        let time = 0
+        let opened = false
+        for (; i < str.length; i++) {
+          const ch = str.charAt(i)
+          if (opened) {
+            if (ch === close) {
+              if (!time) helper.errorAt(i)
+              opened = false
+              onResult(time)
+              break
+            } else if (ch >= "0" && ch <= "9") {
+              time = time * 10 + ch.charCodeAt(0) - langUtil.CHAR_0
+            } else helper.errorAt(i)
+          } else if (ch === open) {
+            opened = true
+          } else helper.errorAt(i)
+        }
+        if (opened) helper.errorAt(i - 1)
+        return i
+      },
+      /**
+       * @param {string} str
+       * @param {number} i
+       * @param {(number) => void} onResult
+       * @return {number}
+       */
+      parseNum(str, i, onResult) {
+        let num = 0
+        for (; i < str.length; i++) {
+          const cc = str.charCodeAt(i) - langUtil.CHAR_0
+          if (cc >= 0 && cc <= 9) {
+            num = num * 10 + cc
+          } else {
+            i--
+            break
+          }
+        }
+        onResult(num)
+        return i
+      },
+      errorAt(index) {
+        throw SyntaxError(`解析错误 (位置: ${index})`)
+      }
+    }
+
+    /**
+     * @param {string} name
+     * @param {string} content
+     * @param {number} version
+     */
+    function parseGenshinImpactMusic(name, content, version) {
+      /*
+      250 {C2}<250>{D2}<500>{E2}<750>
+      按住一会后释放如 A(200) 表示按住 A 200毫秒后释放
+      注意：延时与延音是同时发生的，也就是说A(200) B 表达的意思是按住A的同时按下B在200ms后在松开A 而非按下A200s后松开在按下B，
+      这之间没有一个延时的过程，如果您想表达的是按下A在200ms后松开在按下B可以用如下格式表示: A<200> B，
+      尖括号表示延音且延时，小括号只代表延音不代表延时，如果您实现延时和延音的时间不等长，
+      可以按如下方式配置：A(200) 300 B 这表示按下A等待300ms后按下B，在A按下的200ms后松开A，
+      也可以按如下配置：A<200> 100 B 这与上面的配置是一样的。
+      */
+      if (version !== 2) throw RangeError("版本错误")
+      /** @type {FengxuKey2[]} */
+      const fxKeys = []
+      let start = 0
+      /** @type {FengxuKey2} */
+      let curFxKey = { keys: [], start: 0, wait: 0, hold: 0 }
+      let previousKey = false
+      for (let i = 0; i < content.length; i++) {
+        const ch = content.charAt(i)
+        if (!ch.trim()) continue
+        if (ch === "{") {
+          i = helper.parseKeys(content, i, (keys) => {
+            if (curFxKey.keys.length || curFxKey.wait) fxKeys.push(curFxKey)
+            curFxKey = { keys, start, wait: 0, hold: 0 }
+          })
+          previousKey = true
+        } else if (ch === "<") {
+          if (!previousKey) helper.errorAt(i)
+          i = helper.parseTime(content, i, "<", ">", (time) => {
+            curFxKey.hold += time
+            curFxKey.wait += time
+            start += time
+          })
+          previousKey = false
+        } else if (ch === "(") {
+          if (!previousKey) helper.errorAt(i)
+          i = helper.parseTime(content, i, "(", ")", (time) => {
+            curFxKey.hold += time
+          })
+          previousKey = false
+        } else if (ch >= "0" && ch <= "9") {
+          i = helper.parseNum(content, i, (num) => {
+            curFxKey.wait += num
+            start += num
+          })
+          previousKey = false
+        } else helper.errorAt(i)
+      }
+      fxKeys.push(curFxKey)
+      if (!fxKeys.length) throw RangeError("内容为空")
+
+      /** @type {{keys: number[], start: number, time: number}[]} */
+      const beatList = Object.values(langUtil.groupBy(fxKeys, (it) => it.start)).flatMap((list) => {
+        const keys = list.flatMap((it) => it.keys)
+        const start = list[0].start
+        const wait = list.reduce((a, b) => Math.max(a, b.wait), 0)
+        const hold = list.reduce((a, b) => Math.max(a, b.hold), 0)
+        return (keys.length && wait > hold && hold) ? [
+          { keys, start, time: hold },
+          { keys: [], start: start + hold, time: wait - hold }
+        ] : { keys, start, time: wait }
+      })
+      langUtil.insertionSort(beatList, (a, b) => a.start < b.start)
+
+      let minTime = 0
+      beatList.forEach((it) => {
+        if ((!minTime || it.time < minTime) && it.time) minTime = it.time
+      })
+      const beats = beatList.map((it) => new Beat(new Rate(it.time || minTime * 4, minTime), it.keys))
+      helper.result = new MusicNotation()
+      helper.result.name = name
+      helper.result.bpm = Math.floor(60_000 / minTime)
+      helper.result.beats = beats
+    }
+
     return function(str) {
-      // "250 {C2}<250>{D2}<500>{E2}<750>"
-      throw RangeError("暂不支持")
+      if (str.indexOf(parseGenshinImpactMusic.name) < 0) throw SyntaxError("语法格式错误")
+      const func = new Function(parseGenshinImpactMusic.name, str)
+      func.call(null, parseGenshinImpactMusic)
+      return helper.result
     }
   }
 
@@ -677,7 +887,7 @@
           const rate = str[0] === "/" ? new Rate(acc.a, acc.b * n) : new Rate(acc.a * n, acc.b)
           return this.parseRate(rest[2], rate)
         }
-        throw RangeError("不支持的倍率值：" + str)
+        throw RangeError("不支持的倍率值: " + str)
       },
       /**
        * 解析音符
@@ -691,7 +901,7 @@
           // 这里减 1 使其变为从 0 开始，再转为十二平均律
           return musicUtil.basicNoteTo12TET(note - 1) + this.parseAccidental(str.substring(1), 0)
         }
-        throw RangeError("不支持的音符：" + str[0])
+        throw RangeError("不支持的音符: " + str[0])
       },
       /**
        * 解析变音记号
@@ -722,14 +932,14 @@
           }
           return this.parseAccidental(rest?.[2], acc + n)
         }
-        throw RangeError("不支持的升降调：" + str)
+        throw RangeError("不支持的升降调: " + str)
       }
     }
 
     return function(str) {
       const triple = helper.checkMusicSyntax(helper.removeComment(str))
       const key = triple.keyNote
-      let keyNote = key.charCodeAt(0) - 67
+      let keyNote = key.charCodeAt(0) - langUtil.CHAR_A - 2
       if (keyNote < 0) keyNote += 7 // 把 AB 移到 G 的后面
       keyNote = musicUtil.basicNoteTo12TET(keyNote) // 转为十二平均律
       switch (key[1]) {
