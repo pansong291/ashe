@@ -122,11 +122,6 @@
           background: #F4511E;
       }
 
-      .clear-button:disabled {
-          background: #FFB7A1;
-          cursor: not-allowed;
-      }
-
       .content-output {
           white-space: pre-wrap;
           word-break: break-all;
@@ -251,7 +246,7 @@
       </label>
       <button class="convert-button" :disabled="convertBtnDisabled" @click="convertFiles">开始转换</button>
     </div>
-    <button class="clear-button" :disabled="clearBtnDisabled" @click="clearFiles">清空文件</button>
+    <button class="clear-button" @click="clearAll">全部清空</button>
   </div>
   <div class="content-output">{{ outputText }}</div>
 </script>
@@ -404,7 +399,7 @@
               const buffer = e.target.result
               const binaryString = String.fromCharCode(...new Uint8Array(buffer))
               encoding = jschardet.detect(binaryString).encoding
-              if (encoding === 'ascii') encoding = 'utf8'
+              if (encoding === "ascii") encoding = "utf8"
               const decoder = new TextDecoder(encoding, { ignoreBOM: false })
               resolve(decoder.decode(buffer))
             } catch (error) {
@@ -442,8 +437,9 @@
         if (idx > 0) return str.substring(0, idx)
         return str
       },
-      clearFiles() {
+      clearAll() {
         this.selectedFiles = []
+        this.outputText = ""
       }
     }
   }).mount("#app")
