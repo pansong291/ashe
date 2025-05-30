@@ -629,6 +629,7 @@
      * @property {number} hold 按住时间
      */
     const helper = {
+      funcName: "parseGenshinImpactMusic",
       result: new MusicNotation(),
       /**
        * @param {string} str
@@ -821,8 +822,8 @@
     }
 
     return function(str) {
-      if (str.indexOf(parseGenshinImpactMusic.name) < 0) throw SyntaxError("语法格式错误")
-      const func = new Function(parseGenshinImpactMusic.name, str)
+      if (str.indexOf(helper.funcName) < 0) throw SyntaxError("语法格式错误")
+      const func = new Function(helper.funcName, str)
       func.call(null, parseGenshinImpactMusic)
       return helper.result
     }

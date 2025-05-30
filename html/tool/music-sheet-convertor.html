@@ -2,14 +2,15 @@
 <html lang="zh-cmn-Hans">
 <head>
   <meta charset="UTF-8">
-  <title>Music Sheet Convertor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>乐谱转换器</title>
   <script>
     window.TextEncoder = null
     window.TextDecoder = null
     window._utf16Encoder = null
   </script>
   <script src="../../js/lib/text-encoding/encoding.min.js" type="application/javascript"></script>
-  <script src="../../js/music-sheet/sheet.js"></script>
+  <script src="../../js/music-sheet/sheet.min.js"></script>
   <script src="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/jschardet/3.0.0/jschardet.min.js"
           type="application/javascript"></script>
   <script src="https://lf9-cdn-tos.bytecdntp.com/cdn/expire-1-M/FileSaver.js/2.0.4/FileSaver.min.js"
@@ -27,10 +28,14 @@
           gap: 24px;
           padding: 24px;
       }
+
+      #app * {
+          font-family: "JetBrains Mono", source-code-pro, "SF Mono", Monaco, Menlo, Consolas, "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", "Courier New", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', monospace;
+      }
   </style>
   <style data-desc="main">
       .file-drop-area {
-          height: 300px;
+          height: 200px;
           border: 2px dashed #ccc;
           border-radius: 8px;
           text-align: center;
@@ -72,8 +77,17 @@
           overflow-y: auto;
       }
 
-      .read-button {
-          display: block;
+      .action-wrap {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+      }
+
+      .format-select {
+          padding: 10px 8px;
+      }
+
+      .convert-button {
           padding: 10px 30px;
           background: #2196F3;
           color: white;
@@ -83,22 +97,41 @@
           transition: background 0.3s;
       }
 
-      .read-button:hover {
+      .convert-button:hover {
           background: #1976D2;
       }
 
-      .read-button:disabled {
+      .convert-button:disabled {
           background: #90caf9;
+          cursor: not-allowed;
+      }
+
+      .clear-button {
+          padding: 10px 30px;
+          background: #FF7043;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          transition: background 0.3s;
+      }
+
+      .clear-button:hover {
+          background: #F4511E;
+      }
+
+      .clear-button:disabled {
+          background: #FFB7A1;
           cursor: not-allowed;
       }
 
       .content-output {
           white-space: pre-wrap;
+          word-break: break-all;
           padding: 20px;
           background: #f8f9fa;
           border: 1px solid #ddd;
           font-size: 14px;
-          font-family: "JetBrains Mono", source-code-pro, "SF Mono", Monaco, Menlo, Consolas, "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", "Courier New", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', monospace;
       }
   </style>
   <style data-desc="file-item">
@@ -168,23 +201,30 @@
 </body>
 <script>
   function createZip() {
-    const zip = new JSZip()
+    const helper = {
+      zip: null,
+      getZip() {
+        if (!this.zip) this.zip = new JSZip()
+        return this.zip
+      }
+    }
     return {
       addAsUTF8(path, text) {
-        zip.file(path, text)
+        helper.getZip().file(path, text)
       },
       addAsUTF16LE(path, text) {
         if (!window._utf16Encoder) {
           window._utf16Encoder = new TextEncoder("utf-16le", { NONSTANDARD_allowLegacyEncoding: true })
         }
         const utf16Data = window._utf16Encoder.encode("\uFEFF" + text)
-        zip.file(path, utf16Data, {
+        helper.getZip().file(path, utf16Data, {
           binary: true,
           compression: "DEFLATE"
         })
       },
       download() {
-        zip.generateAsync({ type: "blob" }).then(function(content) {
+        if (!helper.zip) return
+        helper.zip.generateAsync({ type: "blob" }).then(function(content) {
           saveAs(content, "archive.zip")
         })
       }
@@ -200,7 +240,17 @@
   <div class="file-list">
     <FileItem v-for="it in selectedFiles" :file="it" @fileDelete="onFileDelete"></FileItem>
   </div>
-  <button class="read-button" :disabled="readBtnDisabled" @click="readFiles">读取所有文件</button>
+  <div class="action-wrap" style="justify-content: space-between">
+    <div class="action-wrap">
+      <label>输出格式:
+        <select v-model="format" class="format-select">
+          <option v-for="it in formatList" :value="it">{{ it }}</option>
+        </select>
+      </label>
+      <button class="convert-button" :disabled="convertBtnDisabled" @click="convertFiles">开始转换</button>
+    </div>
+    <button class="clear-button" :disabled="clearBtnDisabled" @click="clearFiles">清空文件</button>
+  </div>
   <div class="content-output">{{ outputText }}</div>
 </script>
 <script type="text/x-template" id="file-item">
@@ -246,6 +296,8 @@
         selectedFiles: [],
         isDragOver: false,
         readingFiles: false,
+        formatList: MusicFormatter.formatters,
+        format: "",
         outputText: ""
       }
     },
@@ -253,7 +305,10 @@
       FileItem
     },
     computed: {
-      readBtnDisabled() {
+      convertBtnDisabled() {
+        return !this.format || this.selectedFiles.length <= 0 || this.readingFiles
+      },
+      clearBtnDisabled() {
         return this.selectedFiles.length <= 0 || this.readingFiles
       }
     },
@@ -286,29 +341,53 @@
         const idx = this.selectedFiles.indexOf(file)
         if (idx >= 0) this.selectedFiles.splice(idx, 1)
       },
-      /** 读取文件内容 */
-      async readFiles() {
+      /** 转换乐谱文件 */
+      convertFiles() {
+        const format = this.format
+        if (!format) return
+        if (!window._musicFormatters) window._musicFormatters = Object.create(null)
+        if (!window._musicFormatters[format]) window._musicFormatters[format] = new MusicFormatter(format)
         this.readingFiles = true
         this.outputText = ""
-        const source = "sky-studio-json"
-        const target = "fengxu-genshin-2"
-        for (const file of this.selectedFiles) {
-          try {
-            const content = await this.readFile(file)
-            this.outputText += `=== ${file.name} ===\n${content}\n\n`
-            let mn = new MusicParser(source).parse(content)
-            const converted = new MusicFormatter(target).format(mn)
-            this.outputText += "=== 转换后 ===\n" + converted + "\n\n"
-            mn = new MusicParser(target).parse(converted)
-            this.outputText += "=== 回转 ===\n" + new MusicFormatter(source).format(mn) + "\n\n"
-          } catch (error) {
-            this.outputText += `=== ${file.name} 读取失败 ===\n${error}\n\n`
-            console.error(error)
-          }
-        }
-        this.readingFiles = false
+        Promise.allSettled(this.selectedFiles.map((file) =>
+          new Promise(async (resolve, reject) => {
+            try {
+              const content = await this.readFile(file)
+              const mn = await this.parseMusic(content)
+              const converted = window._musicFormatters[format].format(mn)
+              this.outputText += `${file.name} -- 转换成功\n\n`
+              resolve([file.name, converted])
+            } catch (error) {
+              this.outputText += `${file.name} -- 转换失败 ${error}\n\n`
+              console.error(file.name, error)
+              reject(error)
+            }
+          })
+        )).then((res) => {
+          const zip = createZip()
+          res.forEach((it) => {
+            if (it.status === "fulfilled") {
+              const [filename, result] = it.value
+              const name = this.removeFileNameExt(filename)
+              if (format.startsWith("sky-studio")) {
+                zip.addAsUTF16LE(name + ".txt", result)
+              } else if (format.endsWith("yp")) {
+                zip.addAsUTF8(name + ".yp.txt", result)
+              } else if (format.startsWith("fengxu")) {
+                zip.addAsUTF8(name + ".js", result)
+              }
+            }
+          })
+          zip.download()
+        }).finally(() => {
+          this.readingFiles = false
+        })
       },
-      /** 封装 FileReader 为 Promise */
+      /**
+       * 读取文件内容
+       * @param {File} file
+       * @return {Promise<string>}
+       */
       readFile(file) {
         return new Promise((resolve, reject) => {
           // 处理二进制文件
@@ -332,20 +411,34 @@
           reader.onerror = (e) => reject(e.target.error)
           reader.readAsArrayBuffer(file)
         })
-      }
-    },
-    mounted() {
-      const source = "fengxu-genshin-2"
-      const target = "piano-wizard-yp"
-      const content = "parseGenshinImpactMusic(\"\", \"500{C3D3}<1000>{B3}{B5}<2500>{C4}(100){C5}(100)\", 2)"
-      this.outputText += `=== ABC ===\n${content}\n\n`
-      try {
-        let mn = new MusicParser(source).parse(content)
-        const converted = new MusicFormatter(target).format(mn)
-        this.outputText += "=== 转换后 ===\n" + converted + "\n\n"
-      } catch (error) {
-        this.outputText += `=== 异常 ===\n${error}\n\n`
-        console.error(error)
+      },
+      /**
+       * 解析乐谱
+       * @param {string} str
+       * @return {Promise<MusicNotation>}
+       */
+      parseMusic(str) {
+        if (!window._musicParsers) window._musicParsers = MusicParser.parsers.map((it) => new MusicParser(it))
+        return Promise.any(window._musicParsers.map((parser) => new Promise((resolve, reject) => {
+          try {
+            resolve(parser.parse(str))
+          } catch (e) {
+            reject(e)
+          }
+        })))
+      },
+      /**
+       * @param {string} str
+       * @return {string}
+       */
+      removeFileNameExt(str) {
+        let idx = str.lastIndexOf(".yp.txt")
+        if (idx < 0) idx = str.lastIndexOf(".")
+        if (idx > 0) return str.substring(0, idx)
+        return str
+      },
+      clearFiles() {
+        this.selectedFiles = []
       }
     }
   }).mount("#app")
