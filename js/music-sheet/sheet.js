@@ -1,8 +1,16 @@
 /**
- * @typedef {(MusicNotation) => string} FormatHandler
+ * @typedef {Object} ParseOptions
+ * @property {string?} filename
  */
 /**
- * @typedef {(string) => MusicNotation} ParseHandler
+ * @typedef {Object} FormatOptions
+ * @property {string?} keyLayout
+ */
+/**
+ * @typedef {function(MusicNotation, FormatOptions?): string} FormatHandler
+ */
+/**
+ * @typedef {function(string, ParseOptions?): MusicNotation} ParseHandler
  */
 
 ;(function(global) {
@@ -44,7 +52,7 @@
   }
 
   /**
-   * 节拍。
+   * 节拍
    * @param {Rate} rate 时值倍率；如 1/2 表示为基础时值的一半
    * @param {number[]} [tones] 音调，支持和弦，为空时表示休止或停顿
    * @constructor
@@ -99,7 +107,7 @@
 
   /**
    * 键盘布局
-   * @param {Array} [keys] 键位，按顺序从低音到高音
+   * @param {string[]} [keys] 键位，按顺序从低音到高音
    * @param {number} [keyOffset] 按键偏移
    * @param {boolean} [semitone] 是否启用半音，即十二平均律
    * @constructor
@@ -294,6 +302,17 @@
         const postDelay = Math.floor(it.rate.a * baseTime / it.rate.b)
         return new HitAction(locations, postDelay)
       })
+    },
+    /**
+     * @param {string} kl
+     * @return {KeyLayout}
+     */
+    checkKeyLayout(kl) {
+      const klObj = JSON.parse(kl)
+      if (!Array.isArray(klObj.keys)) throw TypeError("'keys' must be an array")
+      if (!Number.isInteger(klObj.keyOffset)) throw TypeError("'keyOffset' must be an integer")
+      if (klObj.semitone !== true && klObj.semitone !== false) throw TypeError("'semitone' must be a boolean")
+      return new KeyLayout(klObj.keys, klObj.keyOffset, klObj.semitone)
     }
   }
 
@@ -371,14 +390,15 @@
   }
 
   formatters["fengxu-genshin-2"] = () => {
-    const kl = new KeyLayout(
+    const defKl = new KeyLayout(
       "C2,D2,E2,F2,G2,A3,B3,C3,D3,E3,F3,G3,A4,B4,C4,D4,E4,F4,G4,A5,B5"
         .split(",")
         .map((it) => `{${it}}`),
       -7
     )
 
-    return function(mn) {
+    return function(mn, ops) {
+      const kl = ops?.keyLayout ? musicUtil.checkKeyLayout(ops.keyLayout) : defKl
       const hitActions = musicUtil.createHitActions(mn, kl)
       let content = ""
 
@@ -536,13 +556,15 @@
       },
       /**
        * @param {string} str
+       * @param {string} [name]
        * @return {MusicNotation}
        */
-      parseInfo(str) {
+      parseInfo(str, name) {
         const infos = str.split(" ").filter((it) => it)
         const bpm = skyStudioUtil.checkBpm(parseInt(infos[0]))
         const pitchLevel = skyStudioUtil.checkPitchLevel(parseInt(infos[1]))
-        return new MusicNotation("", infos[3], infos[4], pitchLevel, bpm)
+        name = name.substring(0, name.lastIndexOf('.'))
+        return new MusicNotation(name, infos[3], infos[4], pitchLevel, bpm)
       },
       /**
        * @param {string} str
@@ -590,9 +612,9 @@
         throw SyntaxError(`解析错误 (行: ${line}, 列: ${column}, 字符: ${char})`)
       }
     }
-    return function(str) {
+    return function(str, ops) {
       const [infoLine, keysLine] = helper.checkLines(str)
-      const mn = helper.parseInfo(infoLine)
+      const mn = helper.parseInfo(infoLine, ops?.filename)
 
       let dotCount = 0
       const notes = []
@@ -630,7 +652,8 @@
      */
     const helper = {
       funcName: "parseGenshinImpactMusic",
-      result: new MusicNotation(),
+      /** @type {MusicNotation|null} */
+      result: null,
       /**
        * @param {string} str
        * @return {number|undefined}
@@ -822,9 +845,10 @@
     }
 
     return function(str) {
-      if (str.indexOf(helper.funcName) < 0) throw SyntaxError("语法格式错误")
+      helper.result = null
       const func = new Function(helper.funcName, str)
       func.call(null, parseGenshinImpactMusic)
+      if (!helper.result) throw SyntaxError("语法格式错误")
       return helper.result
     }
   }
@@ -937,7 +961,7 @@
       }
     }
 
-    return function(str) {
+    return function(str, ops) {
       const triple = helper.checkMusicSyntax(helper.removeComment(str))
       const key = triple.keyNote
       let keyNote = key.charCodeAt(0) - langUtil.CHAR_A - 2
@@ -952,6 +976,12 @@
           break
       }
       const mn = new MusicNotation()
+      const name = ops?.filename
+      if (name) {
+        let lIdx = name.lastIndexOf('.yp.')
+        if (lIdx < 0) lIdx = name.lastIndexOf('.')
+        mn.name = name.substring(0, lIdx)
+      }
       mn.keyNote = keyNote
       mn.bpm = triple.bpm
       mn.beats = triple.beats.split(",").filter((it) => it).map((it) => helper.parseBeat(it))

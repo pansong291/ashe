@@ -122,6 +122,11 @@
           background: #F4511E;
       }
 
+      .key-layout-editor {
+          resize: vertical;
+          min-height: 10em;
+      }
+
       .content-output {
           white-space: pre-wrap;
           word-break: break-all;
@@ -231,7 +236,7 @@
 <script type="text/x-template" id="main">
   <div class="file-drop-area" :class="{ highlight: isDragOver }" @click="onFileDropAreaClick"
        @dragover.prevent="onFileDragOver" @dragleave="isDragOver = false" @drop.prevent="onFileDrop">
-    <input type="file" ref="fileInput" hidden="hidden" @change="e => handleFiles(e.target.files)" />
+    <input type="file" ref="fileInput" hidden="hidden" multiple @change="e => handleFiles(e.target.files)" />
     <div class="file-drop-info">点击选择文件 或 拖拽文件到此处</div>
   </div>
   <div class="file-list">
@@ -248,6 +253,7 @@
     </div>
     <button class="clear-button" @click="clearAll">全部清空</button>
   </div>
+  <textarea v-show="showKeyLayoutEditor" class="key-layout-editor" spellcheck="false" v-model="keyLayoutText"></textarea>
   <div class="content-output">{{ outputText }}</div>
 </script>
 <script type="text/x-template" id="file-item">
@@ -295,6 +301,13 @@
         readingFiles: false,
         formatList: MusicFormatter.formatters,
         format: "",
+        keyLayoutText: "{\n" +
+          "  \"keys\": [\n" +
+          "    \"{C2}\",\"{D2}\",\"{E2}\",\"{F2}\",\"{G2}\",\"{A3}\",\"{B3}\",\"{C3}\",\"{D3}\",\"{E3}\",\"{F3}\",\"{G3}\",\"{A4}\",\"{B4}\",\"{C4}\",\"{D4}\",\"{E4}\",\"{F4}\",\"{G4}\",\"{A5}\",\"{B5}\"\n" +
+          "  ],\n" +
+          "  \"keyOffset\": -7,\n" +
+          "  \"semitone\": false\n" +
+          "}",
         outputText: ""
       }
     },
@@ -302,11 +315,11 @@
       FileItem
     },
     computed: {
+      showKeyLayoutEditor() {
+        return this.format === "fengxu-genshin-2"
+      },
       convertBtnDisabled() {
         return !this.format || this.selectedFiles.length <= 0 || this.readingFiles
-      },
-      clearBtnDisabled() {
-        return this.selectedFiles.length <= 0 || this.readingFiles
       }
     },
     methods: {
@@ -341,25 +354,31 @@
       convertFiles() {
         const format = this.format
         if (!format) return
+        const formatOps = {}
+        if (this.showKeyLayoutEditor) {
+          formatOps.keyLayout = this.keyLayoutText
+        }
         if (!window._musicFormatters) window._musicFormatters = Object.create(null)
         if (!window._musicFormatters[format]) window._musicFormatters[format] = new MusicFormatter(format)
+        const tooMuch = this.selectedFiles.length > 1000
         this.readingFiles = true
-        this.outputText = ""
+        this.outputText = tooMuch ? "文件数量过多，请耐心等待...\n\n" : ""
         Promise.allSettled(this.selectedFiles.map((file) =>
           new Promise(async (resolve, reject) => {
             try {
               const content = await this.readFile(file)
-              const mn = await this.parseMusic(content)
-              const converted = window._musicFormatters[format].format(mn)
-              this.outputText += `${file.name} -- 转换成功\n\n`
+              const mn = await this.parseMusic(content, file.name)
+              const converted = window._musicFormatters[format].format(mn, formatOps)
+              if (!tooMuch) this.outputText += `${file.name} -- 转换成功\n\n`
               resolve([file.name, converted])
             } catch (e) {
-              this.outputText += `${file.name} -- 转换失败 ${e}\n\n`
-              console.error(file.name, e instanceof AggregateError ? e.errors : e)
-              reject(e)
+              if (!tooMuch) this.outputText += `${file.name} -- 转换失败 ${e}\n\n`
+              const errors = e instanceof AggregateError ? e.errors : [e]
+              reject([file.name, errors])
             }
           })
         )).then((res) => {
+          this.outputText += "转换完成，正在创建压缩包...\n\n"
           const zip = createZip()
           res.forEach((it) => {
             if (it.status === "fulfilled") {
@@ -372,6 +391,10 @@
               } else if (format.startsWith("fengxu")) {
                 zip.addAsUTF8(name + ".js", result)
               }
+            } else {
+              const [filename, errors] = it.reason
+              const result = errors.length === 1 ? String(errors[0]) : errors.map((it) => it.message).join("\n\n")
+              zip.addAsUTF8(`[ERR]${filename}.log`, result)
             }
           })
           zip.download()
@@ -388,7 +411,7 @@
         return new Promise((resolve, reject) => {
           // 处理二进制文件
           if (!file.type.startsWith("text/") && file.type !== "") {
-            resolve("[非文本文件内容]")
+            reject(new TypeError("非文本文件内容"))
             return
           }
 
@@ -405,7 +428,7 @@
             } catch (error) {
               let msg = "解码失败: "
               if (encoding) msg += `[${encoding}] `
-              reject(msg + (error?.message || error))
+              reject(new Error(msg + (error.message || error)))
             }
           }
           reader.onerror = (e) => reject(e.target.error)
@@ -415,15 +438,16 @@
       /**
        * 解析乐谱
        * @param {string} str
+       * @param {string} filename
        * @return {Promise<MusicNotation>}
        */
-      parseMusic(str) {
+      parseMusic(str, filename) {
         if (!window._musicParsers) window._musicParsers = MusicParser.parsers.map((it) => new MusicParser(it))
         return Promise.any(window._musicParsers.map((parser) => new Promise((resolve, reject) => {
           try {
-            resolve(parser.parse(str))
+            resolve(parser.parse(str, { filename }))
           } catch (e) {
-            reject(e)
+            reject(new Error(parser.label + " -> " + e))
           }
         })))
       },
@@ -438,7 +462,7 @@
         return str
       },
       clearAll() {
-        this.selectedFiles = []
+        if (!this.readingFiles) this.selectedFiles = []
         this.outputText = ""
       }
     }
