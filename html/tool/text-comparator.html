@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+  <meta charset="UTF-8">
+  <title>文本对比</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="keywords"
+        content="在线文本对比, 文本比对, 文档对比, 字符串比较, 文本比较, 文本对比工具, 文字比对, 代码对比, diff, text compare, diff checker, compare text">
+  <meta name="description"
+        content="在线文本对比工具，支持精准快速的文本比对、代码对比和文档差异分析。通过字符串比较和文本比较功能，轻松找到内容差异，适合开发者和内容编辑者。支持 diff、text compare、diff checker 等多种对比模式，让文字比对更高效！">
+  <style>
+      body {
+          margin: 0;
+          padding: 0;
+          background-color: #f7f9fa;
+      }
+
+      .container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 60px 20px 20px;
+      }
+
+      main {
+          display: flex;
+          flex-wrap: wrap;
+      }
+
+      @media (max-width: 768px) {
+          .container {
+              padding: 80px 0 20px;
+          }
+
+          main {
+              flex-direction: column;
+          }
+      }
+
+      .tool-class {
+          flex: 3;
+          background-color: #fff;
+          padding: 0 20px;
+          max-width: 1200px;
+      }
+
+      .tool-class-section {
+          margin-bottom: 20px;
+      }
+  </style>
+  <style>
+      h1 {
+          text-align: center;
+          color: #343a40;
+          font-size: 26px;
+      }
+
+      h2 {
+          font-size: 20px;
+      }
+
+      button {
+          padding: 10px;
+          margin-top: 10px;
+          background-color: #3d7fff;
+          color: #fff;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          font-size: 18px;
+      }
+
+      .container-wenben {
+          background: #fff;
+          border-radius: 10px;
+      }
+
+      textarea {
+          width: 49%;
+          height: 300px;
+          margin-bottom: 10px;
+      }
+
+      .diff-result {
+          background: #f9f9f9;
+          padding: 10px;
+          border: 1px solid #ccc;
+          white-space: pre-wrap;
+          font-family: monospace;
+          max-height: 500px;
+          min-height: 200px;
+          overflow-y: auto;
+      }
+
+      .added {
+          background-color: #d4f8d4;
+          color: #228b22;
+      }
+
+      .removed {
+          background-color: #f8d4d4;
+          color: #b22222;
+          text-decoration: line-through;
+      }
+
+      .controls {
+          margin-bottom: 20px;
+          text-align: center;
+      }
+
+      .controls button {
+          margin-right: 10px;
+      }
+
+      #addText {
+          background: #d4f8d4;
+          color: #228b22;
+          padding: 0 6px;
+      }
+
+      #diffResult, #text1, #text2 {
+          font-size: 16px;
+      }
+
+      #diffResult {
+          padding: 10px;
+      }
+
+      #delText {
+          background: #f8d4d4;
+          color: #b22222;
+          padding: 0 6px;
+      }
+
+      @media (max-width: 768px) {
+          textarea {
+              width: 47%;
+          }
+      }
+  </style>
+</head>
+<body>
+<div class="container">
+  <main>
+    <article class="tool-class">
+      <section class="tool-class-section">
+        <div class="container-wenben">
+          <h1>文本对比</h1>
+          <textarea id="text1" placeholder="输入第一段文本"></textarea>
+          <textarea id="text2" placeholder="输入第二段文本"></textarea>
+          <div class="controls">
+            <button id="compareChars">按字对比</button>
+            <button id="compareWords">按句对比</button>
+            <button id="compareLines">按行对比</button>
+          </div>
+          <h2>对比结果</h2>
+          <p><span id="delText">删除：0</span><span id="addText">新增：0</span></p>
+          <div class="diff-result" id="diffResult">等待对比...</div>
+        </div>
+      </section>
+    </article>
+  </main>
+</div>
+<script src="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/jsdiff/5.0.0/diff.min.js"></script>
+<script>
+  function performDiff(type) {
+    const text1 = document.getElementById("text1").value
+    const text2 = document.getElementById("text2").value
+    let add = 0, del = 0, result = ''
+    if (text1 || text2) {
+      let diffArr
+      switch (type) {
+        case "chars":
+          diffArr = Diff.diffChars(text1, text2)
+          break
+        case "words":
+          diffArr = Diff.diffWords(text1, text2)
+          break
+        case "lines":
+          diffArr = Diff.diffLines(text1, text2)
+          break
+        default:
+          return
+      }
+      result = diffArr.map(diff => {
+        const span = document.createElement("span")
+        if (diff.added) {
+          span.className = "added"
+          span.textContent = diff.value
+          add += diff.value.length
+        } else if (diff.removed) {
+          span.className = "removed"
+          span.textContent = diff.value
+          del += diff.value.length
+        } else {
+          span.textContent = diff.value
+        }
+        return span.outerHTML
+      }).join("")
+    } else {
+      result = "请提供需要对比的文本"
+    }
+    document.getElementById("diffResult").innerHTML = result
+    document.getElementById("addText").textContent = "新增: " + add
+    document.getElementById("delText").textContent = "删除: " + del
+  }
+
+  document.getElementById("compareChars").addEventListener("click", () => performDiff("chars"))
+  document.getElementById("compareWords").addEventListener("click", () => performDiff("words"))
+  document.getElementById("compareLines").addEventListener("click", () => performDiff("lines"))
+</script>
+</body>
+</html>
