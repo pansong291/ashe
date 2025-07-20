@@ -41,6 +41,10 @@
           grid-area: b;
       }
 
+      .beat-separator {
+          border-right: 1px solid black;
+      }
+
       .beat {
           display: inline-flex;
           justify-content: start;
@@ -139,6 +143,118 @@
 <script src="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-M/vue/3.2.31/vue.global.min.js"
         type="application/javascript"></script>
 <script>
+  const musicUtil = {
+    parseBeat(b) {
+      try {
+        const beatReg = /^([^*/]+)((?:[*/]\d+)*)$/
+        const mArr = b.match(beatReg)
+        const rate = this.parseRate(mArr[2], { num: 1, den: 1 })
+        const d = this.gcd(rate.num, rate.den)
+        return {
+          notes: mArr[1].split("&").map((it) => this.parseNote(it)),
+          num: rate.num / d,
+          den: rate.den / d
+        }
+      } catch (e) {
+        console.error(`beat parse error: "${b}"`, e)
+        return {
+          notes: [],
+          num: 1,
+          den: 1
+        }
+      }
+    },
+    /**
+     * @param {string} n
+     * @return {{num: number, semi: string, shift: number}}
+     */
+    parseNote(n) {
+      const num = parseInt(n[0])
+      if ((!num && num !== 0) || num < 0 || num > 7) throw `unsupported_note ${n[0]}`
+      const note = {
+        num,
+        semi: "",
+        shift: 0
+      }
+      let next = 1
+      switch (n[1]) {
+        case "#":
+        case "b":
+          note.semi = n[1]
+          next++
+          break
+      }
+      note.shift = this.parseShift(n.substring(next), 0)
+      return note
+    },
+    /**
+     * @param {string} str
+     * @param {number} acc
+     * @return {number}
+     */
+    parseShift(str, acc) {
+      if (!str) return acc
+      // +2 数字省略则为 1
+      const rest = str.substring(1).match(/^(\d+)?(.*)$/)
+      let n = 1
+      if (rest[1]) n = parseInt(rest[1])
+      if (!n) throw `unsupported_time ${rest[1]}`
+      if (str[0] === "-") n = -n
+      else if (str[0] !== "+") throw `unsupported_operator ${str[0]}`
+      return this.parseShift(rest[2], acc + n)
+    },
+    /**
+     * @param {string} str
+     * @param {{num: number, den: number}} acc
+     * @return {{num: number, den: number}}
+     */
+    parseRate(str, acc) {
+      if (!str) return acc
+      // *21/5  乘除后面的数字是必有的
+      const rest = str.substring(1).match(/^(\d+)?(.*)$/)
+      const n = parseInt(rest[1])
+      if (!n || n <= 0) throw `unsupported_time_rate ${rest[1]}`
+      switch (str[0]) {
+        case "/":
+          acc.den *= n
+          break
+        case "*":
+          acc.num *= n
+          break
+        default:
+          throw `unsupported_operator ${str[0]}`
+      }
+      return this.parseRate(rest[2], acc)
+    },
+    /**
+     * 求最大公约数
+     * @param {number} a
+     * @param {number} b
+     * @return {number}
+     */
+    gcd(a, b) {
+      let big = Math.max(a, b)
+      let small = Math.min(a, b)
+      while (small !== 0) {
+        let temp = small
+        small = big % small
+        big = temp
+      }
+      return big
+    },
+    /**
+     * 求最小公倍数
+     * @param {number} a
+     * @param {number} b
+     * @return {number}
+     */
+    lcm(a, b) {
+      if (a === 0 || b === 0) return 0
+      return Math.abs(a * b) / this.gcd(a, b)
+    }
+  }
+</script>
+<script>
   const Note = {
     props: {
       semi: String, // '#' | 'b' | ''
@@ -213,7 +329,8 @@
         segments: [],
         preview: '',
         text: "1,2,3,1,1,2,3,1,3,4,5*2,3,4,5*2,5/2,6/2,5/2,4/2,3,1,5/2,6/2,5/2,4/2,3,1,1,5-1,1*2,1,5-,1*2,0*8,1&2-&3+2*2,7*1/3,7/3,7*2/3,1#,2,2b,1,3b+,",
-        showTime: true
+        showTime: true,
+        section: 4,
       }
     },
     components: {
@@ -227,7 +344,23 @@
           const list = text.split(",")
           const last = list.length - 1
           if (!list[last]) list.splice(last, 1)
-          return list.map(this.parseBeat)
+          const beats = list.map((it) => musicUtil.parseBeat(it))
+          const result = []
+          const acc = { a: 0, b: 1 }
+          for (let i = 0; i < beats.length; i++){
+            const beat = beats[i]
+            beat.idx = i
+            result.push(beat)
+            const lcm = musicUtil.lcm(acc.b, beat.den)
+            acc.a = acc.a * lcm / acc.b + beat.num * lcm / beat.den
+            acc.b = lcm
+            if (acc.a >= this.section * acc.b) {
+              result.push({ separator: true})
+              acc.a = 0
+              acc.b = 1
+            }
+          }
+          return result
         }
       }
     },
@@ -297,104 +430,6 @@
         this.$refs.textarea.focus()
         this.$refs.textarea.setSelectionRange(start, end)
       },
-      parseBeat(b) {
-        try {
-          const beatReg = /^([^*/]+)((?:[*/]\d+)*)$/
-          const mArr = b.match(beatReg)
-          const rate = this.parseRate(mArr[2], { num: 1, den: 1 })
-          const d = this.gcd(rate.num, rate.den)
-          return {
-            notes: mArr[1].split("&").map(this.parseNote),
-            num: rate.num / d,
-            den: rate.den / d
-          }
-        } catch (e) {
-          console.error(`beat parse error: "${b}"`, e)
-          return {
-            notes: [],
-            num: 1,
-            den: 1
-          }
-        }
-      },
-      /**
-       * @param {string} n
-       * @return {{num: number, semi: string, shift: number}}
-       */
-      parseNote(n) {
-        const num = parseInt(n[0])
-        if ((!num && num !== 0) || num < 0 || num > 7) throw `unsupported_note ${n[0]}`
-        const note = {
-          num,
-          semi: "",
-          shift: 0
-        }
-        let next = 1
-        switch (n[1]) {
-          case "#":
-          case "b":
-            note.semi = n[1]
-            next++
-            break
-        }
-        note.shift = this.parseShift(n.substring(next), 0)
-        return note
-      },
-      /**
-       * @param {string} str
-       * @param {number} acc
-       * @return {number}
-       */
-      parseShift(str, acc) {
-        if (!str) return acc
-        // +2 数字省略则为 1
-        const rest = str.substring(1).match(/^(\d+)?(.*)$/)
-        let n = 1
-        if (rest[1]) n = parseInt(rest[1])
-        if (!n) throw `unsupported_time ${rest[1]}`
-        if (str[0] === "-") n = -n
-        else if (str[0] !== "+") throw `unsupported_operator ${str[0]}`
-        return this.parseShift(rest[2], acc + n)
-      },
-      /**
-       * @param {string} str
-       * @param {{num: number, den: number}} acc
-       * @return {{num: number, den: number}}
-       */
-      parseRate(str, acc) {
-        if (!str) return acc
-        // *21/5  乘除后面的数字是必有的
-        const rest = str.substring(1).match(/^(\d+)?(.*)$/)
-        const n = parseInt(rest[1])
-        if (!n || n <= 0) throw `unsupported_time_rate ${rest[1]}`
-        switch (str[0]) {
-          case "/":
-            acc.den *= n
-            break
-          case "*":
-            acc.num *= n
-            break
-          default:
-            throw `unsupported_operator ${str[0]}`
-        }
-        return this.parseRate(rest[2], acc)
-      },
-      /**
-       * 求最大公约数
-       * @param {number} a
-       * @param {number} b
-       * @return {number}
-       */
-      gcd(a, b) {
-        let big = Math.max(a, b)
-        let small = Math.min(a, b)
-        while (small !== 0) {
-          let temp = small
-          small = big % small
-          big = temp
-        }
-        return big
-      }
     },
     template: `
       <div class="page">
@@ -408,12 +443,16 @@
           <button @click="addSegment">添加片段</button>
           <button @click="sanitizeText">规整化文本</button>
           <label><input type="checkbox" v-model="showTime">显示时值</label>
+          <label>节拍：<input type="number" v-model="section" onwheel="" min="1"></label>
         </div>
         <textarea ref="textarea" v-model="text" />
         <div class="beats-container">
-          <Beat v-for="(beat, i) in beats" :notes="beat.notes" :numerator="beat.num" :denominator="beat.den"
-                :show-time="showTime" @click="onBeatClick(i)" @noteClicked="(j) => onNoteClick(i, j)"
-                @timeClicked="onTimeClick(i)" />
+          <template v-for="beat in beats">
+            <div v-if="beat.separator" class="beat-separator"></div>
+            <Beat v-else :notes="beat.notes" :numerator="beat.num" :denominator="beat.den"
+                  :show-time="showTime" @click="onBeatClick(beat.idx)" @noteClicked="(j) => onNoteClick(beat.idx, j)"
+                  @timeClicked="onTimeClick(beat.idx)"/>
+          </template>
         </div>
       </div>
     `
