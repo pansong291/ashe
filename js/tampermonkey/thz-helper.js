@@ -155,7 +155,7 @@
       }
     }
 
-    loadJS('https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/vue/3.2.31/vue.global.prod.min.js')
+    loadJS('https://cdnjs.cloudflare.com/ajax/libs/vue/3.2.31/vue.global.prod.min.js')
       .then(() => window.paso.injectPopup(POPUP_INJECT_CONFIG))
       .then(() => window.Vue.createApp(VUE_APP_CONFIG).mount(`#${namespace}-app`))
 
