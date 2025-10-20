@@ -420,7 +420,15 @@
             let encoding = null
             try {
               const buffer = e.target.result
-              const binaryString = String.fromCharCode(...new Uint8Array(buffer))
+              const uint8Array = new Uint8Array(buffer)
+
+              // 使用分块处理避免调用栈溢出
+              const CHUNK_SIZE = 0x8000 // 32KB 的块大小
+              let binaryString = ''
+              for (let i = 0; i < uint8Array.length; i += CHUNK_SIZE) {
+                const chunk = uint8Array.subarray(i, i + CHUNK_SIZE)
+                binaryString += String.fromCharCode.apply(null, chunk)
+              }
               encoding = jschardet.detect(binaryString).encoding
               if (encoding === "ascii") encoding = "utf8"
               const decoder = new TextDecoder(encoding, { ignoreBOM: false })
